@@ -1,0 +1,264 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 160 84% 39%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Sovereign Obsidian & Neon Resilience Palette */
+    --background: 225 25% 6%;
+    --foreground: 210 40% 98%;
+    --card: 225 25% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 225 25% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 175 95% 50%;
+    --primary-foreground: 225 25% 6%;
+    --secondary: 225 20% 14%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 225 20% 14%;
+    --muted-foreground: 215 20% 75%;
+    --accent: 225 20% 14%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 225 20% 16%;
+    --input: 225 20% 16%;
+    --ring: 175 95% 50%;
+    
+    /* Sovereign Frequency Colors */
+    --sovereign-obsidian: 225 25% 6%;
+    --sovereign-charcoal: 225 20% 10%;
+    --neon-cyan: 175 95% 50%;
+    --neon-cyan-glow: 175 95% 60%;
+    --neon-amber: 38 95% 55%;
+    --neon-amber-glow: 38 100% 65%;
+    --neon-violet: 280 90% 60%;
+    --neon-violet-glow: 280 95% 70%;
+    --neon-emerald: 160 90% 50%;
+    --neon-magenta: 320 90% 55%;
+    --pulse-red: 0 80% 55%;
+    
+    /* Sovereign Ledger Deep Space Colors */
+    --ledger-bg: #0a0a0a;
+    --ledger-card: #1a1a1a;
+    --ledger-border: #2a2a2a;
+    --ledger-accent: #06b6d4; /* Electric Blue / Cyan */
+    --ledger-sage: #10b981; /* Sage Green */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+[data-hydration-error] {
+  display: none !important;
+}
+
+/* Custom scrollbar - Sovereign Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(225 25% 8%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(175 95% 50% / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(175 95% 50% / 0.5);
+}
+
+/* Sovereign Pentagon Glow Effects */
+.sovereign-glow-cyan {
+  box-shadow: 0 0 20px hsl(175 95% 50% / 0.3), 0 0 40px hsl(175 95% 50% / 0.1);
+}
+
+.sovereign-glow-amber {
+  box-shadow: 0 0 20px hsl(38 95% 55% / 0.3), 0 0 40px hsl(38 95% 55% / 0.1);
+}
+
+.sovereign-glow-violet {
+  box-shadow: 0 0 20px hsl(280 90% 60% / 0.3), 0 0 40px hsl(280 90% 60% / 0.1);
+}
+
+.sovereign-glow-emerald {
+  box-shadow: 0 0 20px hsl(160 90% 50% / 0.3), 0 0 40px hsl(160 90% 50% / 0.1);
+}
+
+.sovereign-glow-magenta {
+  box-shadow: 0 0 20px hsl(320 90% 55% / 0.3), 0 0 40px hsl(320 90% 55% / 0.1);
+}
+
+/* Pulse Wave Animation */
+@keyframes pulse-wave {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; filter: blur(4px); }
+  50% { opacity: 1; filter: blur(8px); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.1); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.05); }
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-pulse-wave {
+  animation: pulse-wave 0.8s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.animate-marquee {
+  animation: marquee-scroll 30s linear infinite;
+}
+
+/* Pentagon Card Styles */
+.pentagon-card {
+  @apply relative rounded-xl border transition-all duration-300;
+  background: linear-gradient(135deg, hsl(225 25% 8%) 0%, hsl(225 25% 6%) 100%);
+}
+
+.pentagon-card:hover {
+  transform: translateY(-2px);
+}
+
+.pentagon-card-industrial {
+  @apply pentagon-card;
+  border-color: hsl(38 95% 55% / 0.4);
+}
+
+.pentagon-card-industrial:hover {
+  @apply sovereign-glow-amber;
+}
+
+.pentagon-card-resonance {
+  @apply pentagon-card;
+  border-color: hsl(320 90% 55% / 0.4);
+}
+
+.pentagon-card-resonance:hover {
+  @apply sovereign-glow-magenta;
+}
+
+.pentagon-card-participation {
+  @apply pentagon-card;
+  border-color: hsl(280 90% 60% / 0.4);
+}
+
+.pentagon-card-participation:hover {
+  @apply sovereign-glow-violet;
+}
+
+.pentagon-card-legacy {
+  @apply pentagon-card;
+  border-color: hsl(160 90% 50% / 0.4);
+}
+
+.pentagon-card-legacy:hover {
+  @apply sovereign-glow-emerald;
+}
+
+.pentagon-card-equity {
+  @apply pentagon-card;
+  border-color: hsl(175 95% 50% / 0.4);
+}
+
+.pentagon-card-equity:hover {
+  @apply sovereign-glow-cyan;
+}
+
+/* Pulse Type Colors */
+.pulse-standard { color: hsl(175 95% 50%); }
+.pulse-legacy { color: hsl(160 90% 50%); }
+.pulse-equity { color: hsl(38 95% 55%); }
+.pulse-insurance { color: hsl(280 90% 60%); }
+.pulse-rent { color: hsl(320 90% 55%); }
+.pulse-sale { color: hsl(175 95% 50%); }
+.pulse-airbnb { color: hsl(200 90% 55%); }
+
+/* Regional Distribution Map */
+.zip-beacon {
+  @apply absolute rounded-full;
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.zip-beacon::after {
+  content: '';
+  @apply absolute inset-0 rounded-full;
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Semantic Zoom Transitions */
+.zoom-transition {
+  @apply transition-all duration-500 ease-out;
+}
+
+.macro-view {
+  @apply opacity-100 scale-100;
+}
+
+.micro-view {
+  @apply opacity-100 scale-100;
+}
+
+/* PoE Hash Hover */
+.poe-hash {
+  @apply font-mono text-xs opacity-0 transition-opacity duration-300;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+
+.poe-container:hover .poe-hash {
+  @apply opacity-100;
+}

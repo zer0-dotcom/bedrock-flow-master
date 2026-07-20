@@ -1,0 +1,13 @@
+# Ignore workspace media/screenshot assets
+Uploads/
+
+# Ignore local database backups
+backups/
+*.sql
+
+# Ignore system/environment folders
+.env
+.env.local
+node_modules/
+.next/
+dist/

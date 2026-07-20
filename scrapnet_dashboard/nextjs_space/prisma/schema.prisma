@@ -1,0 +1,2042 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/scrapnet_dashboard/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTH MODELS ====================
+
+enum UserRole {
+  ADMIN
+  AGENT
+  FARMER
+  REALTOR
+  BUSINESS_OWNER
+  SOVEREIGN_INDIVIDUAL
+  FOUNDER
+  SOVEREIGN_AGENT
+  CLIENT_OWNER
+}
+
+enum AgentStatus {
+  REVIEW_REQUIRED
+  APPROVED
+  SUSPENDED
+}
+
+enum ServiceType {
+  ASPHALT
+  BIOCHAR
+  METAL
+}
+
+enum LocationType {
+  RECYCLING_CENTER    // Asphalt recycling yards
+  BIOCHAR_FACILITY    // Biochar processing plants
+  HYBRID              // Combined operations
+}
+
+model User {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // Identification - support both email and username
+  email           String?   @unique
+  username        String?   @unique
+  passwordHash    String    @map("password_hash")
+  
+  // Profile
+  name            String
+  phone           String?
+  
+  // Role & Verification
+  role            UserRole  @default(FARMER)
+  isVerified      Boolean   @default(false) @map("is_verified")
+  verifiedAt      DateTime? @map("verified_at")
+  
+  // Onboarding status
+  onboardingComplete Boolean @default(false) @map("onboarding_complete")
+  
+  // Enabled services for this user (Circular Trifecta)
+  services        ServiceType[] @default([ASPHALT, BIOCHAR])
+  
+  // Agent-specific status
+  agentStatus     AgentStatus? @map("agent_status")
+  agentStatusUpdatedAt DateTime? @map("agent_status_updated_at")
+  
+  // Invitation code used for signup (agents)
+  invitationCodeId String?  @map("invitation_code_id")
+  invitationCode   InvitationCode? @relation(fields: [invitationCodeId], references: [id])
+  
+  // For FARMER role - assigned location (recycling yard or biochar facility)
+  locationId      String?   @map("location_id")
+  location        Location? @relation(fields: [locationId], references: [id])
+  
+  // For linking to existing Farmer record (optional)
+  farmerId        String?   @unique @map("farmer_id")
+  farmer          Farmer?   @relation(fields: [farmerId], references: [id])
+  
+  // Role-specific profiles (one of these based on role)
+  farmerProfile   FarmerProfile?
+  realtorProfile  RealtorProfile?
+  businessProfile BusinessProfile?
+  sovereignProfile SovereignProfile?
+  
+  // User's carbon calculator entries
+  carbonEntries   UserCarbonEntry[]
+  
+  // User's legacy audits
+  legacyAuditsOwned LegacyAudit[] @relation("LegacyAuditOwner")
+  
+  // Recycling logs submitted by this user
+  recyclingLogs   RecyclingLog[]
+
+  @@map("users")
+}
+
+model InvitationCode {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  createdAt       DateTime @default(now()) @map("created_at")
+  expiresAt       DateTime? @map("expires_at")
+  
+  // Usage limits
+  maxUses         Int      @default(1) @map("max_uses")
+  usedCount       Int      @default(0) @map("used_count")
+  
+  // Metadata
+  createdBy       String?  @map("created_by")
+  description     String?
+  isActive        Boolean  @default(true) @map("is_active")
+  
+  // Users who used this code
+  users           User[]
+
+  @@map("invitation_codes")
+}
+
+// ==================== ROLE-SPECIFIC PROFILE MODELS ====================
+
+enum LandType {
+  CROPLAND
+  PASTURE
+  FOREST
+  WETLAND
+  MIXED
+  OTHER
+}
+
+model FarmerProfile {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // User reference
+  userId          String    @unique @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Farmer-specific fields
+  landType        LandType  @default(CROPLAND) @map("land_type")
+  acreage         Float     @default(0)
+  historicalYieldJson String? @map("historical_yield_json") @db.Text // JSON: yearly yield data
+  
+  // Additional details
+  farmName        String?   @map("farm_name")
+  farmLocation    String?   @map("farm_location")
+  primaryCrop     String?   @map("primary_crop")
+  certifications  String?   @db.Text // JSON array: organic, regenerative, etc.
+  
+  @@map("farmer_profiles")
+}
+
+model RealtorProfile {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // User reference
+  userId          String    @unique @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Realtor-specific fields
+  propertyListingCount Int   @default(0) @map("property_listing_count")
+  avgEfficiencyRating Float  @default(0) @map("avg_efficiency_rating") // 1-100 scale
+  
+  // Additional details
+  licenseNumber   String?   @map("license_number")
+  brokerage       String?
+  marketRegion    String?   @map("market_region")
+  specializations String?   @db.Text // JSON array: commercial, residential, green, etc.
+  avgListingPrice Float?    @map("avg_listing_price")
+  
+  @@map("realtor_profiles")
+}
+
+model BusinessProfile {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // User reference
+  userId          String    @unique @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Business-specific fields (Scope 1/2/3 emissions)
+  scope1Emissions Float     @default(0) @map("scope1_emissions") // Direct emissions (tonnes CO2/year)
+  scope2Emissions Float     @default(0) @map("scope2_emissions") // Indirect energy (tonnes CO2/year)
+  scope3Emissions Float     @default(0) @map("scope3_emissions") // Value chain (tonnes CO2/year)
+  
+  // Additional details
+  companyName     String?   @map("company_name")
+  industry        String?
+  employeeCount   Int?      @map("employee_count")
+  annualRevenue   Float?    @map("annual_revenue")
+  fiscalYear      Int?      @map("fiscal_year")
+  reportingStandard String? @map("reporting_standard") // GHG Protocol, CDP, etc.
+  
+  @@map("business_profiles")
+}
+
+model SovereignProfile {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // User reference
+  userId          String    @unique @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Sovereign Individual fields
+  zipCode         String?   @map("zip_code")
+  householdSize   Int       @default(1) @map("household_size")
+  
+  // Vibrational metrics (calculated from Legacy Healer)
+  vibrationalBalance Float  @default(0) @map("vibrational_balance") // Total carbon equity USD
+  ledgerEquity       Float  @default(0) @map("ledger_equity") // 70% founder yield
+  historicalAuditsCount Int @default(0) @map("historical_audits_count")
+  
+  // Consciousness level
+  consciousnessLevel Int    @default(1) @map("consciousness_level")
+  sovereignScore     Int    @default(0) @map("sovereign_score")
+  
+  // Property telemetry fields (v2.4 onboarding patch)
+  annualFootprint   Float?   @map("annual_footprint")   // Annual utility baseline kWh
+  offsetGoal        Float?   @map("offset_goal")        // 70% Sovereign Share capacity USD
+
+  // Pentagon data cache
+  pentagonDataJson  String?  @map("pentagon_data_json") @db.Text
+  
+  @@map("sovereign_profiles")
+}
+
+// ==================== USER CARBON ENTRIES ====================
+
+model UserCarbonEntry {
+  id              String    @id @default(uuid())
+  entryId         String    @unique @map("entry_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // User reference
+  userId          String    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Entry type
+  entryType       String    @map("entry_type") // ASPHALT, BIOCHAR, LEGACY_HEALER, RE_HOSPITALITY
+  
+  // Carbon metrics
+  carbonSavedTonnes Float   @map("carbon_saved_tonnes")
+  carbonValueUsd    Float   @map("carbon_value_usd")
+  
+  // Universal Law split
+  founderYield70    Float   @map("founder_yield_70")
+  stewardship20     Float   @map("stewardship_20")
+  publicOverflow10  Float   @map("public_overflow_10")
+  
+  // Source reference (links to original record)
+  sourceTable       String  @map("source_table")
+  sourceId          String  @map("source_id")
+  
+  // Verification
+  poeHash           String? @map("poe_hash")
+  verified          Boolean @default(false)
+  
+  @@index([userId])
+  @@index([entryType])
+  @@index([createdAt])
+  @@map("user_carbon_entries")
+}
+
+// ==================== UNIFIED LOCATION MODEL ====================
+// Replaces separate Yard and BiocharSite models
+
+model Location {
+  id              String       @id @default(uuid())
+  locationId      String       @unique @map("location_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  
+  // Location details
+  name            String
+  type            LocationType @default(RECYCLING_CENTER)
+  address         String?
+  gpsCoordinates  String?      @map("gps_coordinates")
+  
+  // Operational details
+  isActive        Boolean      @default(true) @map("is_active")
+  capacity        Float?       // Processing capacity in tonnes/day
+  certifications  String?      @db.Text  // JSON array of certifications
+  
+  // Contact info
+  contactName     String?      @map("contact_name")
+  contactPhone    String?      @map("contact_phone")
+  contactEmail    String?      @map("contact_email")
+  
+  // Users assigned to this location
+  users           User[]
+  
+  // Recycling logs destined for this location (RECYCLING_CENTER, HYBRID)
+  recyclingLogs   RecyclingLog[]
+  
+  // Biochar batches processed at this location (BIOCHAR_FACILITY, HYBRID)
+  biocharBatches  BiocharBatch[]
+
+  @@index([type])
+  @@index([isActive])
+  @@map("locations")
+}
+
+model Project {
+  id                    String   @id @default(uuid())
+  projectId             String   @unique @map("project_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Input parameters
+  plannedTonnage        Float    @map("planned_tonnage")
+  targetRapPercentage   Float    @map("target_rap_percentage")
+  tripDistance          Float    @map("trip_distance")
+  mixType               String   @map("mix_type")
+  layerType             String   @map("layer_type")
+  carbonCap             Float    @default(60) @map("carbon_cap")
+  
+  // Output results
+  predictedCo2Emissions Float    @map("predicted_co2_emissions")
+  optimalRapPercentage  Float    @map("optimal_rap_percentage")
+  carbonScore           Float    @map("carbon_score")
+  tonsCo2Saved          Float    @map("tons_co2_saved")
+  mixRecommendation     String   @map("mix_recommendation") @db.Text
+  meetsGreenTarget      Boolean  @map("meets_green_target")
+  carbonCapCompliance   Boolean  @map("carbon_cap_compliance")
+  
+  // Blockchain metadata
+  gpsCoordinates        String?  @map("gps_coordinates")
+  blockchainTimestamp   DateTime @map("blockchain_timestamp")
+  blockchainJson        String   @map("blockchain_json") @db.Text
+
+  @@map("projects")
+}
+
+// ==================== BIOCHAR ENGINE MODELS ====================
+
+model Farmer {
+  id              String   @id @default(uuid())
+  farmerId        String   @unique @map("farmer_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // Farmer details
+  name            String
+  email           String?
+  phone           String?
+  farmName        String?  @map("farm_name")
+  farmLocation    String?  @map("farm_location")
+  gpsCoordinates  String?  @map("gps_coordinates")
+  
+  // Verification status
+  isVerified      Boolean  @default(false) @map("is_verified")
+  verifiedAt      DateTime? @map("verified_at")
+  
+  // Agent/Referrer relationship
+  referrerId      String?  @map("referrer_id")
+  referrer        Farmer?  @relation("FarmerReferrals", fields: [referrerId], references: [id])
+  referrals       Farmer[] @relation("FarmerReferrals")
+  
+  // Aggregated stats
+  totalFeedstockKg    Float   @default(0) @map("total_feedstock_kg")
+  totalCreditsEarned  Float   @default(0) @map("total_credits_earned")
+  totalAgentCommission Float  @default(0) @map("total_agent_commission")
+  
+  // Relations
+  biocharBatches  BiocharBatch[]
+  credits         FarmerCredit[]
+  user            User?
+
+  @@map("farmers")
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model BiocharBatch {
+  id                    String   @id @default(uuid())
+  batchId               String   @unique @map("batch_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Verification status (for agent approval)
+  verificationStatus    VerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt            DateTime? @map("verified_at")
+  verifiedBy            String?   @map("verified_by")
+  rejectionReason       String?   @map("rejection_reason")
+  
+  // Input parameters
+  feedstockType         String   @map("feedstock_type")
+  dryWeightKg           Float    @map("dry_weight_kg")
+  moistureContentPercent Float   @default(15) @map("moisture_content_percent")
+  pyrolysisTempCelsius  Float    @map("pyrolysis_temp_celsius")
+  hCorgRatio            Float    @map("h_corg_ratio")
+  
+  // Calculated outputs
+  effectiveDryWeightKg  Float    @map("effective_dry_weight_kg")
+  biocharYieldKg        Float    @map("biochar_yield_kg")
+  cdrCreditsTonnes      Float    @map("cdr_credits_tonnes")
+  co2EquivalentTonnes   Float    @map("co2_equivalent_tonnes")
+  
+  // Stability & Permanence
+  stabilityClass        String   @map("stability_class")
+  permanenceYears       Int      @map("permanence_years")
+  permanenceFactor      Float    @map("permanence_factor")
+  
+  // Process compliance
+  processCompliant      Boolean  @map("process_compliant")
+  warnings              String?  @db.Text
+  
+  // Location & Traceability
+  feedstockSourceGps    String?  @map("feedstock_source_gps")
+  processingLocationId  String?  @map("processing_location_id")
+  processingLocation    Location? @relation(fields: [processingLocationId], references: [id])
+  
+  // Farmer relation (optional)
+  farmerId              String?  @map("farmer_id")
+  farmer                Farmer?  @relation(fields: [farmerId], references: [id])
+  farmerCreditAmount    Float?   @map("farmer_credit_amount")
+  
+  // Commission breakdown (when referrer exists)
+  agentId               String?  @map("agent_id")
+  agentCommissionAmount Float?   @map("agent_commission_amount")
+  scrapnetAmount        Float?   @map("scrapnet_amount")
+  
+  // Hedera Guardian metadata
+  hederaGuardianJson    String   @map("hedera_guardian_json") @db.Text
+  guardianTimestamp     DateTime @map("guardian_timestamp")
+  
+  // Certificate metadata for blockchain attestation
+  certificateJson       String?  @map("certificate_json") @db.Text
+  
+  // Dual-Blockchain Attestation
+  // Hedera HCS - Consensus Service for immutable audit trail
+  hederaTopicId         String?  @map("hedera_topic_id")
+  hederaTransactionId   String?  @map("hedera_transaction_id")
+  hederaConsensusTimestamp String? @map("hedera_consensus_timestamp")
+  hederaMessageHash     String?  @map("hedera_message_hash")
+  
+  // Polygon ERC-1155 - Fractionalized CDR token
+  polygonTokenId        String?  @map("polygon_token_id")
+  polygonTransactionHash String? @map("polygon_transaction_hash")
+  polygonContractAddress String? @map("polygon_contract_address")
+  polygonMintTimestamp  DateTime? @map("polygon_mint_timestamp")
+  polygonTokenUri       String?  @map("polygon_token_uri") @db.Text
+  
+  // Cross-chain linkage metadata
+  crossChainMetadataJson String? @map("cross_chain_metadata_json") @db.Text
+
+  @@index([batchId])
+  @@index([farmerId])
+  @@index([createdAt])
+  @@map("biochar_batches")
+}
+
+// Recycling Log for Asphalt Engine
+model RecyclingLog {
+  id                    String   @id @default(uuid())
+  logId                 String   @unique @map("log_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Verification status (for agent approval)
+  verificationStatus    VerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt            DateTime? @map("verified_at")
+  verifiedBy            String?   @map("verified_by")
+  rejectionReason       String?   @map("rejection_reason")
+  
+  // Recycling details
+  materialType          String   @map("material_type")  // RAP, millings, reclaimed aggregate
+  weightKg              Float    @map("weight_kg")
+  sourceLocation        String?  @map("source_location")
+  sourceGps             String?  @map("source_gps")
+  
+  // Processing info
+  processingDate        DateTime @map("processing_date")
+  destinationLocationId String?  @map("destination_location_id")
+  destinationLocation   Location? @relation(fields: [destinationLocationId], references: [id])
+  
+  // Submitter info
+  submittedById         String?  @map("submitted_by_id")
+  submittedBy           User?    @relation(fields: [submittedById], references: [id])
+  
+  // Notes
+  notes                 String?  @db.Text
+
+  @@index([logId])
+  @@index([verificationStatus])
+  @@index([createdAt])
+  @@map("recycling_logs")
+}
+
+model FarmerCredit {
+  id              String   @id @default(uuid())
+  creditId        String   @unique @map("credit_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  // Credit details
+  creditAmount    Float    @map("credit_amount")
+  creditType      String   @map("credit_type")  // "biochar_contribution", "feedstock_supply"
+  status          String   @default("pending")  // "pending", "issued", "redeemed"
+  
+  // Related batch
+  batchId         String?  @map("batch_id")
+  
+  // Farmer relation
+  farmerId        String   @map("farmer_id")
+  farmer          Farmer   @relation(fields: [farmerId], references: [id])
+  
+  // Issuance details
+  issuedAt        DateTime? @map("issued_at")
+  redeemedAt      DateTime? @map("redeemed_at")
+  
+  // Blockchain reference
+  tokenId         String?  @map("token_id")
+  transactionHash String?  @map("transaction_hash")
+
+  @@map("farmer_credits")
+}
+
+// ==================== CONSENT & COMPLIANCE ====================
+
+model UserConsent {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // User identification
+  email                 String?
+  walletAddress         String?  @map("wallet_address")
+  
+  // Consent flags
+  termsAccepted         Boolean  @default(false) @map("terms_accepted")
+  carbonRightsTransfer  Boolean  @default(false) @map("carbon_rights_transfer")
+  aiMonitoring          Boolean  @default(false) @map("ai_monitoring")
+  
+  // Consent timestamps
+  termsAcceptedAt       DateTime? @map("terms_accepted_at")
+  carbonRightsAt        DateTime? @map("carbon_rights_at")
+  aiMonitoringAt        DateTime? @map("ai_monitoring_at")
+  
+  // Audit trail
+  consentHash           String   @unique @map("consent_hash")
+  ipAddress             String?  @map("ip_address")
+  userAgent             String?  @map("user_agent") @db.Text
+  
+  // Version tracking
+  termsVersion          String   @default("1.0") @map("terms_version")
+  
+  // Consent history
+  consentLogs           ConsentLog[]
+
+  @@map("user_consents")
+}
+
+model ConsentLog {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  // User reference
+  userId          String   @map("user_id")
+  userConsent     UserConsent @relation(fields: [userId], references: [userId])
+  
+  // Log details
+  action          String   // "accept", "revoke", "update"
+  consentType     String   @map("consent_type")  // "terms", "carbon_rights", "ai_monitoring"
+  previousValue   Boolean  @map("previous_value")
+  newValue        Boolean  @map("new_value")
+  
+  // Audit hash for this specific action
+  logHash         String   @unique @map("log_hash")
+  
+  // Context
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent") @db.Text
+
+  @@map("consent_logs")
+}
+
+// ==================== METAL RECOVERY ENGINE ====================
+
+enum MetalType {
+  STEEL
+  ALUMINUM
+  COPPER
+  BRASS
+  STAINLESS
+  MIXED
+  OTHER
+}
+
+model MetalRecoveryLog {
+  id                    String   @id @default(uuid())
+  logId                 String   @unique @map("log_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Verification status
+  verificationStatus    VerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt            DateTime? @map("verified_at")
+  verifiedBy            String?   @map("verified_by")
+  rejectionReason       String?   @map("rejection_reason")
+  
+  // Metal details
+  metalType             MetalType @map("metal_type")
+  weightKg              Float     @map("weight_kg")
+  purityPercent         Float     @default(90) @map("purity_percent")
+  
+  // Source traceability
+  sourceDescription     String?   @map("source_description")
+  sourceLocationId      String?   @map("source_location_id")
+  sourceGps             String?   @map("source_gps")
+  
+  // Processing info
+  processingDate        DateTime  @map("processing_date")
+  destinationLocationId String?   @map("destination_location_id")
+  
+  // Carbon savings calculation
+  // Avoided emissions = weight × emission factor × purity
+  avoidedEmissionsKg    Float     @map("avoided_emissions_kg")
+  emissionFactorUsed    Float     @map("emission_factor_used")
+  
+  // Submitter info
+  submittedById         String?   @map("submitted_by_id")
+  
+  // Notes
+  notes                 String?   @db.Text
+  
+  // Blockchain attestation
+  blockchainJson        String?   @map("blockchain_json") @db.Text
+
+  @@index([logId])
+  @@index([metalType])
+  @@index([verificationStatus])
+  @@index([createdAt])
+  @@map("metal_recovery_logs")
+}
+
+// ==================== DIGITAL VAULT NODE MODELS ====================
+
+enum VaultNodeType {
+  BANK              // Financial institution
+  VAULT             // Secure storage facility
+  CERTIFIED_PROCESSOR // Licensed destruction facility
+}
+
+enum CurrencyType {
+  USD               // US Dollar
+  EUR               // Euro
+  GBP               // British Pound
+  JPY               // Japanese Yen
+  CHF               // Swiss Franc
+  GOLD_BULLION      // Gold bars/coins
+  SILVER_BULLION    // Silver bars/coins
+  PLATINUM          // Platinum
+  MIXED_PRECIOUS    // Mixed precious metals
+}
+
+enum VaultVerificationStatus {
+  DRAFT             // In progress
+  PENDING_AI_CHECK  // Waiting for AI verification
+  AI_VERIFIED       // AI check passed
+  AI_FLAGGED        // AI detected issues
+  PENDING_DESTRUCTION // Awaiting destruction proof
+  DESTRUCTION_UPLOADED // Video uploaded, pending review
+  COMPLETED         // Fully verified and processed
+  REJECTED          // Failed verification
+}
+
+model VaultNode {
+  id                String        @id @default(uuid())
+  nodeId            String        @unique @map("node_id")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  
+  // Node identification
+  name              String
+  nodeType          VaultNodeType @map("node_type")
+  
+  // Certification details
+  certificationNumber String?     @map("certification_number")
+  certifiedUntil    DateTime?     @map("certified_until")
+  isActive          Boolean       @default(true) @map("is_active")
+  
+  // Contact & location
+  address           String?
+  region            String?       // e.g., "North America", "Europe", "Asia Pacific"
+  country           String?
+  coordinates       String?       // "lat,lng" for map display
+  contactName       String?       @map("contact_name")
+  contactEmail      String?       @map("contact_email")
+  contactPhone      String?       @map("contact_phone")
+  
+  // Security clearance level (1-5)
+  securityLevel     Int           @default(3) @map("security_level")
+  
+  // Associated users
+  operators         VaultNodeOperator[]
+  
+  // Verifications processed by this node
+  verifications     VaultVerification[]
+
+  @@index([nodeType])
+  @@index([isActive])
+  @@map("vault_nodes")
+}
+
+model VaultNodeOperator {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  // Link to user
+  userId          String    @map("user_id")
+  
+  // Link to vault node
+  vaultNodeId     String    @map("vault_node_id")
+  vaultNode       VaultNode @relation(fields: [vaultNodeId], references: [id])
+  
+  // Role within the vault
+  role            String    @default("OPERATOR") // OPERATOR, SUPERVISOR, AUDITOR
+  
+  // Permissions
+  canVerify       Boolean   @default(true) @map("can_verify")
+  canApprove      Boolean   @default(false) @map("can_approve")
+  canDelete       Boolean   @default(false) @map("can_delete")
+
+  @@unique([userId, vaultNodeId])
+  @@map("vault_node_operators")
+}
+
+model VaultVerification {
+  id                String                  @id @default(uuid())
+  verificationId    String                  @unique @map("verification_id")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+  
+  // Status tracking
+  status            VaultVerificationStatus @default(DRAFT)
+  
+  // Vault node reference
+  vaultNodeId       String                  @map("vault_node_id")
+  vaultNode         VaultNode               @relation(fields: [vaultNodeId], references: [id])
+  
+  // Currency/Asset details
+  currencyType      CurrencyType            @map("currency_type")
+  serialRangeStart  String?                 @map("serial_range_start")
+  serialRangeEnd    String?                 @map("serial_range_end")
+  serialCount       Int?                    @map("serial_count")
+  totalValue        Float                   @map("total_value")
+  valueCurrency     String                  @default("USD") @map("value_currency")
+  
+  // Gold-specific fields
+  goldPurity        Float?                  @map("gold_purity") // In karats or percentage
+  goldWeightGrams   Float?                  @map("gold_weight_grams")
+  assayNumber       String?                 @map("assay_number")
+  
+  // AI Verification results
+  aiCheckTimestamp  DateTime?               @map("ai_check_timestamp")
+  aiCheckResult     String?                 @map("ai_check_result") @db.Text // JSON result
+  aiConfidenceScore Float?                  @map("ai_confidence_score")
+  securityFeatures  String?                 @map("security_features") @db.Text // JSON array
+  flaggedIssues     String?                 @map("flagged_issues") @db.Text // JSON array
+  
+  // Proof of destruction
+  destructionVideoUrl   String?             @map("destruction_video_url")
+  destructionVideoHash  String?             @map("destruction_video_hash") // SHA-256
+  destructionTimestamp  DateTime?           @map("destruction_timestamp")
+  destructionMethod     String?             @map("destruction_method") // SHREDDING, SMELTING, INCINERATION
+  destructionWitnesses  String?             @map("destruction_witnesses") @db.Text // JSON array
+  
+  // Operator info
+  submittedById     String                  @map("submitted_by_id")
+  verifiedById      String?                 @map("verified_by_id")
+  
+  // Notes and metadata
+  notes             String?                 @db.Text
+  blockchainJson    String?                 @map("blockchain_json") @db.Text
+  
+  // Avoided Logistics Auditor fields
+  originCoordinates       String?           @map("origin_coordinates") // "lat,lng" of Local Bank
+  destinationCoordinates  String?           @map("destination_coordinates") // "lat,lng" of Central Reserve
+  distanceKm              Float?            @map("distance_km")
+  transportMethod         String?           @map("transport_method") // AIR_CARGO, ARMORED_VEHICLE
+  avoidedCo2Grams         Float?            @map("avoided_co2_grams")
+  avoidedCo2Kg            Float?            @map("avoided_co2_kg")
+  unverifiedCredits       Float?            @map("unverified_credits") // Pending proof of destruction
+  creditStatus            String?           @map("credit_status") // UNVERIFIED, PENDING_HASH, VERIFIED
+  logisticsAuditTimestamp DateTime?         @map("logistics_audit_timestamp")
+  logisticsAuditJson      String?           @map("logistics_audit_json") @db.Text
+
+  @@index([verificationId])
+  @@index([status])
+  @@index([currencyType])
+  @@index([vaultNodeId])
+  @@index([createdAt])
+  @@map("vault_verifications")
+}
+
+// ==================== GLOBAL COMPLIANCE & JURISDICTION ====================
+
+enum Jurisdiction {
+  US        // United States - GENIUS Act
+  EU        // European Union - MiCA
+  UK        // United Kingdom
+  SG        // Singapore - Project Guardian
+  JP        // Japan
+  CH        // Switzerland
+  APAC      // Asia Pacific (other)
+  LATAM     // Latin America
+  MENA      // Middle East & North Africa
+  UNKNOWN
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  WARNING
+  NON_COMPLIANT
+  PENDING_REVIEW
+  EXEMPT
+}
+
+enum TransactionType {
+  MINT            // Token creation
+  TRANSFER        // Wallet-to-wallet
+  SETTLEMENT      // Cross-border settlement
+  REDEMPTION      // Credit redemption
+  SPLIT           // Credit distribution
+}
+
+model ComplianceFramework {
+  id                  String            @id @default(uuid())
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  
+  // Framework identification
+  frameworkId         String            @unique @map("framework_id") // e.g., "GENIUS_ACT_2026"
+  name                String            // e.g., "GENIUS Act (US)"
+  jurisdiction        Jurisdiction
+  
+  // Status tracking
+  status              ComplianceStatus  @default(PENDING_REVIEW)
+  statusReason        String?           @map("status_reason")
+  lastAuditDate       DateTime?         @map("last_audit_date")
+  nextAuditDate       DateTime?         @map("next_audit_date")
+  
+  // License information
+  licenseNumber       String?           @map("license_number")
+  licenseExpiry       DateTime?         @map("license_expiry")
+  regulatoryBody      String?           @map("regulatory_body")
+  
+  // Requirements
+  requiresTreasuryBackup    Boolean     @default(false) @map("requires_treasury_backup")
+  requiresWhitepaperHash    Boolean     @default(false) @map("requires_whitepaper_hash")
+  travelRuleThreshold       Float?      @map("travel_rule_threshold") // e.g., 1000 for €1000
+  travelRuleCurrency        String?     @map("travel_rule_currency") // e.g., "EUR"
+  
+  // Metadata
+  documentationUrl    String?           @map("documentation_url")
+  configJson          String?           @map("config_json") @db.Text
+  
+  @@index([jurisdiction])
+  @@index([status])
+  @@map("compliance_frameworks")
+}
+
+model InternationalTransaction {
+  id                  String            @id @default(uuid())
+  transactionId       String            @unique @map("transaction_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  
+  // Transaction type
+  type                TransactionType
+  
+  // Originator (sender)
+  originatorNodeId    String?           @map("originator_node_id")
+  originatorWallet    String            @map("originator_wallet")
+  originatorName      String?           @map("originator_name")
+  originatorJurisdiction Jurisdiction   @map("originator_jurisdiction")
+  originatorGpsLat    Float?            @map("originator_gps_lat")
+  originatorGpsLng    Float?            @map("originator_gps_lng")
+  
+  // Beneficiary (receiver)
+  beneficiaryNodeId   String?           @map("beneficiary_node_id")
+  beneficiaryWallet   String            @map("beneficiary_wallet")
+  beneficiaryName     String?           @map("beneficiary_name")
+  beneficiaryJurisdiction Jurisdiction? @map("beneficiary_jurisdiction")
+  
+  // Transaction details
+  currencyCode        String            @map("currency_code") // USD, EUR, GBP, SGD
+  amount              Float
+  amountUsd           Float?            @map("amount_usd") // Converted to USD
+  exchangeRate        Float?            @map("exchange_rate")
+  
+  // FATF Travel Rule
+  travelRuleTriggered Boolean           @default(false) @map("travel_rule_triggered")
+  travelRuleDataJson  String?           @map("travel_rule_data_json") @db.Text // Encrypted PII exchange
+  travelRuleTimestamp DateTime?         @map("travel_rule_timestamp")
+  
+  // VAT/Tax
+  vatApplicable       Boolean           @default(false) @map("vat_applicable")
+  vatRate             Float?            @map("vat_rate")
+  vatAmount           Float?            @map("vat_amount")
+  taxJurisdiction     String?           @map("tax_jurisdiction")
+  
+  // Carbon Credit Distribution (70/20/10)
+  creditDistributionJson String?        @map("credit_distribution_json") @db.Text
+  bankShare           Float?            @map("bank_share")
+  platformShare       Float?            @map("platform_share")
+  sustainabilityShare Float?            @map("sustainability_share")
+  
+  // Jurisdiction-specific enforcement
+  treasuryBackupRequired Boolean        @default(false) @map("treasury_backup_required")
+  treasuryBackupHash  String?           @map("treasury_backup_hash")
+  whitepaperHashRequired Boolean        @default(false) @map("whitepaper_hash_required")
+  whitepaperHash      String?           @map("whitepaper_hash")
+  
+  // Blockchain references
+  blockchainTxHash    String?           @map("blockchain_tx_hash")
+  hederaTopicId       String?           @map("hedera_topic_id")
+  hederaSequenceNum   String?           @map("hedera_sequence_num")
+  
+  // Audit trail
+  status              String            @default("PENDING") // PENDING, COMPLETED, FAILED, REVERSED
+  statusReason        String?           @map("status_reason")
+  auditTrailJson      String?           @map("audit_trail_json") @db.Text
+  
+  @@index([transactionId])
+  @@index([originatorJurisdiction])
+  @@index([beneficiaryJurisdiction])
+  @@index([createdAt])
+  @@index([type])
+  @@map("international_transactions")
+}
+
+model TravelRuleExchange {
+  id                  String            @id @default(uuid())
+  createdAt           DateTime          @default(now()) @map("created_at")
+  
+  // Link to transaction
+  transactionId       String            @map("transaction_id")
+  
+  // Originator PII (encrypted)
+  originatorFullName  String?           @map("originator_full_name")
+  originatorAddress   String?           @map("originator_address")
+  originatorAccountId String?           @map("originator_account_id")
+  originatorIdType    String?           @map("originator_id_type") // PASSPORT, NATIONAL_ID, etc.
+  originatorIdNumber  String?           @map("originator_id_number")
+  
+  // Beneficiary PII (encrypted)
+  beneficiaryFullName String?           @map("beneficiary_full_name")
+  beneficiaryAddress  String?           @map("beneficiary_address")
+  beneficiaryAccountId String?          @map("beneficiary_account_id")
+  
+  // Compliance
+  jurisdictionThreshold Float           @map("jurisdiction_threshold")
+  jurisdictionCurrency String           @map("jurisdiction_currency")
+  complianceFrameworkId String?         @map("compliance_framework_id")
+  
+  // Exchange status
+  dataSharedAt        DateTime?         @map("data_shared_at")
+  dataReceivedAt      DateTime?         @map("data_received_at")
+  encryptionKeyHash   String?           @map("encryption_key_hash")
+  
+  // GDPR/CCPA compliance
+  dataRetentionDays   Int               @default(2555) @map("data_retention_days") // ~7 years
+  scheduledDeletion   DateTime?         @map("scheduled_deletion")
+  privacyConsentHash  String?           @map("privacy_consent_hash")
+  
+  @@index([transactionId])
+  @@map("travel_rule_exchanges")
+}
+
+model VatTaxRate {
+  id                  String            @id @default(uuid())
+  jurisdiction        Jurisdiction
+  countryCode         String            @map("country_code")
+  regionCode          String?           @map("region_code") // State/Province
+  
+  // Tax rates
+  standardRate        Float             @map("standard_rate")
+  reducedRate         Float?            @map("reduced_rate")
+  carbonCreditRate    Float?            @map("carbon_credit_rate") // Special rate for carbon credits
+  
+  // Validity
+  effectiveFrom       DateTime          @map("effective_from")
+  effectiveTo         DateTime?         @map("effective_to")
+  isActive            Boolean           @default(true) @map("is_active")
+  
+  // Metadata
+  taxAuthorityName    String?           @map("tax_authority_name")
+  
+  @@unique([jurisdiction, countryCode, regionCode, effectiveFrom])
+  @@map("vat_tax_rates")
+}
+
+// ==================== FINANCED EMISSIONS / IMPACT ENGINE ====================
+
+enum OffsetStatus {
+  COMPLETE
+  PARTIAL
+  INSUFFICIENT
+  PENDING
+}
+
+model PortfolioOffset {
+  id                  String            @id @default(uuid())
+  offsetId            String            @unique @map("offset_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  
+  // Institution info
+  institutionId       String            @map("institution_id")
+  institutionName     String            @map("institution_name")
+  
+  // Portfolio reference
+  portfolioBacktraceId String          @map("portfolio_backtrace_id")
+  portfolioValueUsd   Float             @map("portfolio_value_usd")
+  
+  // Carbon debt details
+  originalDebtTonnes  Float             @map("original_debt_tonnes")
+  scope1Debt          Float             @default(0) @map("scope1_debt")
+  scope2Debt          Float             @default(0) @map("scope2_debt")
+  scope3Debt          Float             @default(0) @map("scope3_debt")
+  
+  // Offset details
+  creditsRetiredTonnes Float           @map("credits_retired_tonnes")
+  remainingDebtTonnes Float            @map("remaining_debt_tonnes")
+  coveragePercent     Float             @map("coverage_percent")
+  status              OffsetStatus
+  
+  // Certificate
+  certificationHash   String?           @map("certification_hash")
+  certificateJson     String?           @map("certificate_json") @db.Text
+  validUntil          DateTime?         @map("valid_until")
+  
+  // Related credits retired
+  retiredCredits      RetiredCredit[]
+  
+  @@index([institutionId])
+  @@index([portfolioBacktraceId])
+  @@index([status])
+  @@map("portfolio_offsets")
+}
+
+model RetiredCredit {
+  id                  String            @id @default(uuid())
+  createdAt           DateTime          @default(now()) @map("created_at")
+  
+  // Link to offset
+  portfolioOffsetId   String            @map("portfolio_offset_id")
+  portfolioOffset     PortfolioOffset   @relation(fields: [portfolioOffsetId], references: [id])
+  
+  // Original credit reference
+  verificationId      String            @map("verification_id")
+  creditType          String            @map("credit_type") // AVOIDED_LOGISTICS, DESTRUCTION_TOKENIZATION
+  creditAmountTonnes  Float             @map("credit_amount_tonnes")
+  
+  // Retirement proof
+  retirementHash      String            @unique @map("retirement_hash")
+  retiredAt           DateTime          @map("retired_at")
+  destructionHash     String?           @map("destruction_hash")
+  
+  @@index([verificationId])
+  @@index([portfolioOffsetId])
+  @@map("retired_credits")
+}
+
+model FinancedEmissionLog {
+  id                  String            @id @default(uuid())
+  logId               String            @unique @map("log_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  
+  // Type of emission tracking
+  emissionType        String            @map("emission_type") // TRADE_FOOTPRINT, PORTFOLIO_CARBON, DATA_CENTER
+  
+  // Calculation details
+  inputDataJson       String            @map("input_data_json") @db.Text
+  resultJson          String            @map("result_json") @db.Text
+  
+  // Carbon figures (tonnes CO2e)
+  totalEmissions      Float             @map("total_emissions")
+  scope1Emissions     Float?            @map("scope1_emissions")
+  scope2Emissions     Float?            @map("scope2_emissions")
+  scope3Emissions     Float?            @map("scope3_emissions")
+  
+  // Backtrace for transparency
+  backtraceId         String            @map("backtrace_id")
+  backtraceJson       String?           @map("backtrace_json") @db.Text
+  
+  // User/institution reference
+  userId              String?           @map("user_id")
+  institutionId       String?           @map("institution_id")
+  
+  @@index([emissionType])
+  @@index([backtraceId])
+  @@index([createdAt])
+  @@map("financed_emission_logs")
+}
+
+// ==================== UNIVERSAL LEDGER (70/20/10 Law) ====================
+
+enum ExtractionType {
+  DEAD_MASS           // Module 1: Industrial Extraction
+  RESONANCE           // Module 2: Creator Flow
+  PARTICIPATION       // Module 3: CIP & FREALITY
+}
+
+enum ComplianceState {
+  COMPLIANT
+  HIGH_FRICTION
+  BLOCKED
+  RESTORED
+}
+
+enum AssetType {
+  CURRENCY
+  GOLD
+  SILVER
+  ELECTRONICS
+  INDUSTRIAL
+  PAPER
+}
+
+enum ContentType {
+  PODCAST
+  MUSIC
+  VIDEO
+  EDUCATION
+  LIVESTREAM
+  ARTICLE
+}
+
+model UniversalLedgerEntry {
+  id                    String            @id @default(uuid())
+  entryId               String            @unique @map("entry_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  
+  // Extraction type
+  extractionType        ExtractionType    @map("extraction_type")
+  
+  // Source reference
+  sourceNodeId          String            @map("source_node_id")
+  sourceEntityId        String?           @map("source_entity_id") // Creator ID, User ID, etc.
+  
+  // Value and split
+  totalValueUsd         Float             @map("total_value_usd")
+  founderYieldUsd       Float             @map("founder_yield_usd")
+  stewardshipUsd        Float             @map("stewardship_usd")
+  publicResilienceUsd   Float             @map("public_resilience_usd")
+  
+  // Carbon metrics
+  carbonAvoidedTonnes   Float             @map("carbon_avoided_tonnes")
+  deadMassKg            Float?            @map("dead_mass_kg")
+  
+  // Compliance
+  complianceState       ComplianceState   @default(COMPLIANT) @map("compliance_state")
+  complianceRestoredAt  DateTime?         @map("compliance_restored_at")
+  
+  // Token minting
+  tokenType             String?           @map("token_type") // CARBON_NEGATIVE_RWA, RESONANCE_PRINT, SOCIAL_YIELD
+  tokenMinted           Boolean           @default(false) @map("token_minted")
+  tokenHash             String?           @map("token_hash")
+  mintedAt              DateTime?         @map("minted_at")
+  
+  // Input/Output data
+  inputHash             String            @map("input_hash")
+  resultJson            String            @map("result_json") @db.Text
+  
+  // Verification
+  verificationHash      String?           @map("verification_hash")
+  
+  @@index([extractionType])
+  @@index([sourceNodeId])
+  @@index([complianceState])
+  @@index([createdAt])
+  @@map("universal_ledger_entries")
+}
+
+model DeadMassExtraction {
+  id                    String            @id @default(uuid())
+  extractionId          String            @unique @map("extraction_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  
+  // Asset details
+  assetType             AssetType         @map("asset_type")
+  weightKg              Float             @map("weight_kg")
+  destructionMethod     String            @map("destruction_method")
+  
+  // Verification
+  verificationHash      String            @map("verification_hash") // SHA-256 of destruction video
+  gpsCoordinates        String            @map("gps_coordinates")
+  
+  // IoT sensor data
+  iotTemperatureC       Float?            @map("iot_temperature_c")
+  iotPressureBar        Float?            @map("iot_pressure_bar")
+  iotHumidityPercent    Float?            @map("iot_humidity_percent")
+  iotTimestamp          DateTime?         @map("iot_timestamp")
+  
+  // Value
+  totalValueUsd         Float             @map("total_value_usd")
+  
+  // Carbon metrics
+  carbonAvoidedKg       Float             @map("carbon_avoided_kg")
+  carbonAvoidedTonnes   Float             @map("carbon_avoided_tonnes")
+  
+  // Node reference
+  nodeId                String            @map("node_id")
+  
+  // Link to universal ledger
+  ledgerEntryId         String?           @map("ledger_entry_id")
+  
+  @@index([assetType])
+  @@index([nodeId])
+  @@index([createdAt])
+  @@map("dead_mass_extractions")
+}
+
+model ResonancePrint {
+  id                    String            @id @default(uuid())
+  resonanceId           String            @unique @map("resonance_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  
+  // Creator info
+  creatorId             String            @map("creator_id")
+  contentId             String            @map("content_id")
+  contentType           ContentType       @map("content_type")
+  
+  // Engagement metrics
+  views                 Int
+  streams               Int
+  durationMinutes       Float             @map("duration_minutes")
+  engagementScore       Float             @map("engagement_score")
+  
+  // Platform
+  platform              String
+  region                String
+  
+  // Revenue
+  revenueUsd            Float             @map("revenue_usd")
+  
+  // Avoided logistics
+  flightsAvoided        Float             @map("flights_avoided")
+  plasticMediaTonnes    Float             @map("plastic_media_tonnes")
+  paperTonnes           Float             @map("paper_tonnes")
+  carbonAvoidedTonnes   Float             @map("carbon_avoided_tonnes")
+  
+  // Resonance score
+  resonanceScore        Float             @map("resonance_score")
+  
+  // Token
+  tokenMinted           Boolean           @default(false) @map("token_minted")
+  tokenHash             String?           @map("token_hash")
+  
+  // Link to universal ledger
+  ledgerEntryId         String?           @map("ledger_entry_id")
+  
+  @@index([creatorId])
+  @@index([contentType])
+  @@index([createdAt])
+  @@map("resonance_prints")
+}
+
+model SocialYield {
+  id                    String            @id @default(uuid())
+  participationId       String            @unique @map("participation_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  
+  // User info
+  userId                String            @map("user_id")
+  
+  // Impact shift
+  previousFootprintKg   Float             @map("previous_footprint_kg")
+  currentFootprintKg    Float             @map("current_footprint_kg")
+  reductionKg           Float             @map("reduction_kg")
+  reductionPercent      Float             @map("reduction_percent")
+  
+  // Consciousness metrics
+  consciousnessScore    Float             @map("consciousness_score")
+  previousLevel         Int               @map("previous_level")
+  currentLevel          Int               @map("current_level")
+  levelUp               Boolean           @map("level_up")
+  
+  // Positive actions count
+  positiveActionsCount  Int               @map("positive_actions_count")
+  positiveActionsJson   String            @map("positive_actions_json") @db.Text
+  
+  // Social yield
+  eligible              Boolean
+  yieldAmount           Float             @map("yield_amount")
+  bonusMultiplier       Float             @map("bonus_multiplier")
+  totalYield            Float             @map("total_yield")
+  
+  // Distribution
+  distributed           Boolean           @default(false)
+  distributedAt         DateTime?         @map("distributed_at")
+  
+  // Link to universal ledger
+  ledgerEntryId         String?           @map("ledger_entry_id")
+  
+  @@index([userId])
+  @@index([eligible])
+  @@index([createdAt])
+  @@map("social_yields")
+}
+
+model PublicResilienceGrant {
+  id                    String            @id @default(uuid())
+  grantId               String            @unique @map("grant_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  
+  // Recipient
+  householdId           String            @map("household_id")
+  recipientName         String?           @map("recipient_name")
+  region                String
+  
+  // Grant details
+  amountUsd             Float             @map("amount_usd")
+  grantType             String            @map("grant_type") // ENERGY_ASSISTANCE, FOOD_SECURITY, EDUCATION, HEALTHCARE
+  
+  // Source tracking (10% pool contributions)
+  sourceEntryIds        String[]          @map("source_entry_ids")
+  
+  // Status
+  status                String            @default("PENDING") // PENDING, APPROVED, DISTRIBUTED, VERIFIED
+  distributedAt         DateTime?         @map("distributed_at")
+  verificationHash      String?           @map("verification_hash")
+  
+  @@index([householdId])
+  @@index([region])
+  @@index([status])
+  @@index([createdAt])
+  @@map("public_resilience_grants")
+}
+
+model ImpactReport {
+  id                    String            @id @default(uuid())
+  reportId              String            @unique @map("report_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  
+  // Node reference
+  nodeId                String            @map("node_id")
+  
+  // Period
+  periodFrom            DateTime          @map("period_from")
+  periodTo              DateTime          @map("period_to")
+  
+  // Mass avoided
+  deadMassKg            Float             @map("dead_mass_kg")
+  carbonAvoidedTonnes   Float             @map("carbon_avoided_tonnes")
+  equivalentFlights     Int               @map("equivalent_flights")
+  equivalentCars        Int               @map("equivalent_cars")
+  
+  // Families sustained
+  publicResilienceUsd   Float             @map("public_resilience_usd")
+  averageGrantUsd       Float             @map("average_grant_usd")
+  householdsReached     Int               @map("households_reached")
+  
+  // Split compliance
+  founderYieldTotal     Float             @map("founder_yield_total")
+  stewardshipTotal      Float             @map("stewardship_total")
+  complianceRate        Float             @map("compliance_rate")
+  
+  // Certification
+  certificationHash     String            @map("certification_hash")
+  
+  @@index([nodeId])
+  @@index([periodFrom])
+  @@index([createdAt])
+  @@map("impact_reports")
+}
+
+// ==================== MODULE 4: LEGACY AUDIT (HISTORICAL HEALING) ====================
+
+enum LegacyDataSource {
+  MLS                   // Multiple Listing Service
+  INSURANCE_RECORD      // Insurance claims/policies
+  TITLE_COMPANY         // Title/escrow records
+  COUNTY_RECORD         // County deed/tax records
+  BROKER_SYSTEM         // Broker transaction data
+  CUSTOM_CSV            // Custom uploaded CSV
+}
+
+enum LegacyEfficiencyType {
+  E_SIGNATURE           // Digital signatures (avoided paper)
+  VIRTUAL_TOUR          // Virtual property tours
+  REMOTE_CLOSING        // Remote notary/closing
+  DIGITAL_DOCUMENT      // Digital document storage
+  AUTOMATED_WORKFLOW    // Automated processes
+  VIDEO_INSPECTION      // Remote video inspections
+}
+
+model LegacyAudit {
+  id                    String            @id @default(uuid())
+  auditId               String            @unique @map("audit_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  
+  // Data source
+  dataSource            LegacyDataSource  @map("data_source")
+  dataSourceRef         String?           @map("data_source_ref")
+  uploadedFileHash      String?           @map("uploaded_file_hash")
+  
+  // Period covered (up to 10 years historical)
+  periodFrom            DateTime          @map("period_from")
+  periodTo              DateTime          @map("period_to")
+  yearsAnalyzed         Float             @map("years_analyzed")
+  
+  // Transaction counts
+  totalTransactions     Int               @map("total_transactions")
+  digitalTransactions   Int               @map("digital_transactions")
+  digitalAdoptionRate   Float             @map("digital_adoption_rate")
+  
+  // Friction avoided calculations
+  adminFrictionAvoided  Float             @map("admin_friction_avoided")    // USD value
+  logisticsFrictionAvoided Float          @map("logistics_friction_avoided") // USD value
+  totalFrictionAvoided  Float             @map("total_friction_avoided")     // USD value
+  
+  // 2026 Market Rate adjustment
+  marketRateMultiplier  Float             @default(1.0) @map("market_rate_multiplier")
+  legacyYieldUsd        Float             @map("legacy_yield_usd")
+  
+  // 70/20/10 Split
+  founderYieldUsd       Float             @map("founder_yield_usd")
+  stewardshipUsd        Float             @map("stewardship_usd")
+  publicResilienceUsd   Float             @map("public_resilience_usd")
+  
+  // Carbon equivalent
+  carbonAvoidedTonnes   Float             @map("carbon_avoided_tonnes")
+  
+  // Owner/Entity
+  ownerId               String            @map("owner_id")
+  ownerType             String            @map("owner_type")    // INDIVIDUAL, BROKERAGE, COMPANY
+  ownerZipCode          String?           @map("owner_zip_code")
+  
+  // Link to User (optional - for logged-in users)
+  ownerUserId           String?           @map("owner_user_id")
+  ownerUser             User?             @relation("LegacyAuditOwner", fields: [ownerUserId], references: [id])
+  
+  // Compliance
+  complianceStatus      String            @default("PENDING") @map("compliance_status")
+  geniusActCompliant    Boolean           @default(false) @map("genius_act_compliant")
+  poeVerificationHash   String?           @map("poe_verification_hash")
+  
+  // Retro-settlement status
+  settledAt             DateTime?         @map("settled_at")
+  settlementHash        String?           @map("settlement_hash")
+  pulseStringGenerated  String?           @map("pulse_string_generated") @db.Text
+  
+  // Ledger link
+  ledgerEntryId         String?           @map("ledger_entry_id")
+  
+  @@index([ownerId])
+  @@index([dataSource])
+  @@index([periodFrom])
+  @@index([complianceStatus])
+  @@index([createdAt])
+  @@map("legacy_audits")
+}
+
+// ==================== REAL ESTATE & INSURANCE SPECIALTY ====================
+
+enum PropertyType {
+  RESIDENTIAL_SINGLE    // Single family home
+  RESIDENTIAL_MULTI     // Multi-family (2-4 units)
+  CONDO                 // Condominium
+  COMMERCIAL            // Commercial property
+  LAND                  // Vacant land
+  INDUSTRIAL            // Industrial property
+}
+
+enum EquityState {
+  LIQUID                // Available for use
+  LOCKED                // Locked in Debt-Erasure Protocol
+  PARTIAL_LOCK          // Partially locked
+  PENDING_VERIFICATION  // Awaiting verification
+}
+
+model VibrationalEquity {
+  id                    String            @id @default(uuid())
+  equityId              String            @unique @map("equity_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  
+  // Property identification
+  propertyAddress       String            @map("property_address")
+  propertyType          PropertyType      @map("property_type")
+  propertyZipCode       String            @map("property_zip_code")
+  mlsNumber             String?           @map("mls_number")
+  parcelNumber          String?           @map("parcel_number")
+  
+  // Valuation
+  currentValueUsd       Float             @map("current_value_usd")
+  mortgageBalanceUsd    Float             @map("mortgage_balance_usd")
+  equityValueUsd        Float             @map("equity_value_usd")
+  
+  // "Liquid Battery" metrics
+  batteryCapacityUsd    Float             @map("battery_capacity_usd")   // Max usable equity
+  batteryChargePercent  Float             @map("battery_charge_percent") // Current "charge" level
+  equityState           EquityState       @map("equity_state")
+  
+  // Owner
+  ownerId               String            @map("owner_id")
+  ownerName             String?           @map("owner_name")
+  
+  // Debt-Erasure Protocol (uses 20% Stewardship fund)
+  debtErasureActive     Boolean           @default(false) @map("debt_erasure_active")
+  debtErasureAmountUsd  Float?            @map("debt_erasure_amount_usd")
+  debtErasureStartedAt  DateTime?         @map("debt_erasure_started_at")
+  debtErasureCompletedAt DateTime?        @map("debt_erasure_completed_at")
+  stewardshipFundsUsed  Float?            @map("stewardship_funds_used")
+  
+  // RWA Token output
+  rwaTokenMinted        Boolean           @default(false) @map("rwa_token_minted")
+  rwaTokenHash          String?           @map("rwa_token_hash")
+  rwaTokenValueUsd      Float?            @map("rwa_token_value_usd")
+  
+  // Verification
+  lastVerifiedAt        DateTime?         @map("last_verified_at")
+  verificationSource    String?           @map("verification_source")
+  
+  @@index([ownerId])
+  @@index([propertyZipCode])
+  @@index([equityState])
+  @@index([createdAt])
+  @@map("vibrational_equities")
+}
+
+enum InsuranceClaimStatus {
+  ACTIVE                // Policy active, no claims
+  CLAIM_FILED           // Claim submitted
+  IOT_VERIFICATION      // IoT/Satellite verifying
+  VERIFIED              // Automatically verified
+  SETTLED               // Claim settled
+  NO_CLAIM_YIELD        // No claim, yield growing
+  DISPUTED              // Requires manual review
+  REJECTED              // Claim rejected
+}
+
+model ParametricInsurance {
+  id                    String               @id @default(uuid())
+  policyId              String               @unique @map("policy_id")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  
+  // Policy details
+  policyType            String               @map("policy_type")      // PROPERTY, CROP, WEATHER, NATURAL_DISASTER
+  coverageAmountUsd     Float                @map("coverage_amount_usd")
+  premiumPaidUsd        Float                @map("premium_paid_usd")
+  deductibleUsd         Float                @default(0) @map("deductible_usd")
+  
+  // Policy period
+  policyStartDate       DateTime             @map("policy_start_date")
+  policyEndDate         DateTime             @map("policy_end_date")
+  
+  // Asset/Property covered
+  assetDescription      String               @map("asset_description")
+  assetLocationGps      String?              @map("asset_location_gps")
+  assetZipCode          String?              @map("asset_zip_code")
+  
+  // IoT/Satellite verification
+  iotDeviceIds          String[]             @map("iot_device_ids")
+  satelliteDataSource   String?              @map("satellite_data_source")
+  lastIotReading        DateTime?            @map("last_iot_reading")
+  iotDataJson           String?              @map("iot_data_json") @db.Text
+  
+  // Claim status
+  claimStatus           InsuranceClaimStatus @default(ACTIVE) @map("claim_status")
+  claimFiledAt          DateTime?            @map("claim_filed_at")
+  claimVerifiedAt       DateTime?            @map("claim_verified_at")
+  claimSettledAt        DateTime?            @map("claim_settled_at")
+  claimAmountUsd        Float?               @map("claim_amount_usd")
+  
+  // Parametric trigger (automatic claim)
+  parametricTrigger     String?              @map("parametric_trigger") @db.Text // JSON conditions
+  triggerActivated      Boolean              @default(false) @map("trigger_activated")
+  triggerActivatedAt    DateTime?            @map("trigger_activated_at")
+  
+  // No-claim yield (70% grows as RWA)
+  noClaimDays           Int                  @default(0) @map("no_claim_days")
+  accruedYieldUsd       Float                @default(0) @map("accrued_yield_usd")
+  yieldAprPercent       Float                @default(5.0) @map("yield_apr_percent")
+  
+  // RWA conversion (if no claim)
+  convertedToRwa        Boolean              @default(false) @map("converted_to_rwa")
+  rwaTokenHash          String?              @map("rwa_token_hash")
+  rwaTokenValueUsd      Float?               @map("rwa_token_value_usd")
+  
+  // Owner
+  ownerId               String               @map("owner_id")
+  ownerName             String?              @map("owner_name")
+  
+  // Verification hash (no physical adjusters needed)
+  verificationHash      String?              @map("verification_hash")
+  
+  // Pulse string
+  lastPulseString       String?              @map("last_pulse_string") @db.Text
+  
+  @@index([ownerId])
+  @@index([claimStatus])
+  @@index([policyEndDate])
+  @@index([createdAt])
+  @@map("parametric_insurance")
+}
+
+// ==================== PULSE STRING LOG ====================
+
+model PulseString {
+  id                    String            @id @default(uuid())
+  pulseId               String            @unique @map("pulse_id")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  
+  // Pulse content
+  pulseType             String            @map("pulse_type")    // SETTLE, RETRO_SETTLE, GRANT, YIELD, CLAIM
+  pulseString           String            @map("pulse_string") @db.Text
+  
+  // Reference IDs
+  referenceId           String            @map("reference_id")
+  referenceType         String            @map("reference_type") // LEDGER, LEGACY_AUDIT, INSURANCE, EQUITY
+  
+  // Amounts
+  founderYieldUsd       Float?            @map("founder_yield_usd")
+  stewardshipUsd        Float?            @map("stewardship_usd")
+  publicResilienceUsd   Float?            @map("public_resilience_usd")
+  totalValueUsd         Float             @map("total_value_usd")
+  
+  // Target zip code for public resilience
+  targetZipCode         String?           @map("target_zip_code")
+  
+  // Display flag
+  displayed             Boolean           @default(false)
+  displayedAt           DateTime?         @map("displayed_at")
+  
+  @@index([pulseType])
+  @@index([referenceType])
+  @@index([createdAt])
+  @@map("pulse_strings")
+}
+
+
+// ==================== BUSINESS SUBMISSION PORTAL ====================
+
+enum SubmissionTrack {
+  TRACK_A_MATERIALS     // Asphalt/Concrete/Metal invoices → ICE v4.1
+  TRACK_B_ENERGY_179D   // Building envelopes & energy audits → IRS 7205
+  TRACK_C_BIOCHAR_CDR   // Biochar production receipts → CDR credits
+}
+
+enum SubmissionStatus {
+  DRAFT                       // Initial upload, not yet parsed
+  PENDING_FORENSIC_VERIFICATION // Parsed, awaiting HUM event match
+  FORENSIC_VERIFIED           // Matched a notarized HUM event
+  SETTLEMENT_COMPLETE         // 70/20/10 split executed
+  REJECTED_FORENSIC           // Failed forensic verification
+  // v2.4 — Sentinel Verdict tiers
+  AUTO_APPROVED
+  PENDING_SOVEREIGN_REVIEW
+  PENDING_AUTHORIZATION
+  SOVEREIGN_HOLD
+  ESCROW_REVIEW
+  PENDING_PLATFORM_REVIEW
+  REJECTED
+}
+
+// Precious Metals assay certification status
+enum AssayStatus {
+  UNASSAYED
+  PENDING
+  CERTIFIED
+}
+
+// Settlement asset class variant routing (A–E)
+enum SettlementAssetClass {
+  SOVEREIGN_SKIN            // Variant A: Sovereign Skin™ / Gripsy
+  PROPERTY_INDUSTRIAL       // Variant B: Property — Industrial
+  PROPERTY_RESIDENTIAL      // Variant C: Property — Residential
+  PHYSICAL_COMMODITIES      // Variant D: Physical Commodities
+  PRECIOUS_METALS_CUSTODIAL // Variant E: Precious Metals Custodial
+}
+
+model Submission {
+  id                    String              @id @default(uuid())
+  submissionId          String              @unique @map("submission_id")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  // Track classification
+  track                 SubmissionTrack
+  status                SubmissionStatus    @default(DRAFT)
+
+  // Corporate identity (wallet-gated)
+  walletAddress         String              @map("wallet_address")
+  companyName           String?             @map("company_name")
+  submittedById         String?             @map("submitted_by_id")
+
+  // Service Identity tether
+  serviceIdentity       String              @default("9tsq8qB4P9uPRSHrjXLaDQJd93nuo4wEEtkR1tAJRAQ3") @map("service_identity")
+
+  // AI-parsed forensic data (populated by LLM parser)
+  vendorName            String?             @map("vendor_name")
+  energyDeltaMw         Float?              @map("energy_delta_mw")
+  materialVolume        Float?              @map("material_volume")
+  materialUnit          String?             @map("material_unit")    // tonnes, kg, m³, etc.
+  materialSku           String?             @map("material_sku")
+  extractedTimestamp    DateTime?           @map("extracted_timestamp")
+  parserConfidence      Float?              @map("parser_confidence") // 0-1
+
+  // ICE v4.1 mapping (Track A)
+  iceCoefficient        Float?              @map("ice_coefficient")
+  iceMaterial           String?             @map("ice_material")
+
+  // 179D compliance (Track B)
+  irsForm7205Json       String?             @map("irs_form_7205_json") @db.Text
+  buildingEnvelopeJson  String?             @map("building_envelope_json") @db.Text
+
+  // CDR linkage (Track C)
+  biocharBatchRef       String?             @map("biochar_batch_ref")
+  cdrCreditsTonnes      Float?              @map("cdr_credits_tonnes")
+
+  // Carbon impact (calculated)
+  carbonTonnes          Float?              @map("carbon_tonnes")
+  carbonValueUsd        Float?              @map("carbon_value_usd")
+
+  // Forensic verification
+  humEventHash          String?             @map("hum_event_hash")   // Matching HUM tx
+  forensicVerifiedAt    DateTime?           @map("forensic_verified_at")
+  backtraceId           String              @default("BT-C9C4C5") @map("backtrace_id")
+
+  // Notary anchor
+  solanaTxHash          String?             @map("solana_tx_hash")
+  notaryAnchoredAt      DateTime?           @map("notary_anchored_at")
+
+  // Founder approval gate (Human-in-the-loop circuit breaker)
+  founderApproved       Boolean             @default(false) @map("founder_approved")
+  founderApprovedAt     DateTime?           @map("founder_approved_at")
+  founderApprovalNote   String?             @map("founder_approval_note") @db.Text
+
+  // Protocol ingest metadata
+  ingestProtocol        String?             @map("ingest_protocol")    // "aethexer-v1" or null for legacy
+  ingestTimestamp       DateTime?           @map("ingest_timestamp")
+
+  // Full parser output
+  parserResultJson      String?             @map("parser_result_json") @db.Text
+
+  // Documents
+  documents             SubmissionDocument[]
+
+  // Settlement
+  settlement            Settlement?
+
+  // Precious Metals ingest payload (Track A — Precious Metals)
+  purityPercentage      Float?              @map("purity_percentage")   // 0.0–1.0 (e.g. 0.999 for 99.9%)
+  assayStatus           AssayStatus?        @map("assay_status")        // UNASSAYED | PENDING | CERTIFIED
+  refineryDiscount      Float?              @map("refinery_discount")   // USD discount applied by refinery
+  spotPriceAtIngest     Float?              @map("spot_price_at_ingest") // Spot price at time of ingest (USD/oz)
+  verifiedAssetValue    Float?              @map("verified_asset_value") // VAL = (Spot × Weight × Purity) − Refinery Discount
+
+  // Certificate
+  certificateUrl        String?             @map("certificate_url")
+  certificateHash       String?             @map("certificate_hash")
+
+  @@index([track])
+  @@index([status])
+  @@index([walletAddress])
+  @@index([createdAt])
+  @@map("submissions")
+}
+
+model SubmissionDocument {
+  id                    String              @id @default(uuid())
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  // Parent submission
+  submissionId          String              @map("submission_id")
+  submission            Submission          @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // File metadata
+  fileName              String              @map("file_name")
+  fileType              String              @map("file_type")    // pdf, csv, xlsx, docx, ply, splat
+  fileSizeBytes         Int                 @map("file_size_bytes")
+  cloudStoragePath      String              @map("cloud_storage_path")
+  fileHash              String              @map("file_hash")    // SHA-256
+
+  // Parsing status
+  parsed                Boolean             @default(false)
+  parsedAt              DateTime?           @map("parsed_at")
+  parseResultJson       String?             @map("parse_result_json") @db.Text
+
+  @@index([submissionId])
+  @@map("submission_documents")
+}
+
+model Settlement {
+  id                    String              @id @default(uuid())
+  settlementId          String              @unique @map("settlement_id")
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  // Parent submission
+  submissionId          String              @unique @map("submission_id")
+  submission            Submission          @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // Total value being settled
+  totalValueUsd         Float               @map("total_value_usd")
+
+  // 70/20/10 split — Verified Asset Value / Platform Processor / Public Resilience
+  assetOwnerShare       Float               @map("asset_owner_share")       // 70% Verified Asset Value
+  assetOwnerWallet      String              @map("asset_owner_wallet")
+  treasuryShare         Float               @map("treasury_share")          // 20% Platform Processor
+  treasuryWallet        String              @default("BEDROCK_ESG_TREASURY") @map("treasury_wallet")
+  specialistShare       Float               @map("specialist_share")        // 10% Public Resilience
+  specialistId          String?             @map("specialist_id")
+  specialistWallet      String?             @map("specialist_wallet")
+
+  // Public Resilience fallback (singular block — no hardcoded sub-splits)
+  routedToSustainabilityPool Boolean        @default(false) @map("routed_to_sustainability_pool")
+  sustainabilityPoolVault    String?        @map("sustainability_pool_vault")
+
+  // Asset class variant routing (A–E)
+  assetClass                 SettlementAssetClass? @map("asset_class")
+  assetClassMetadata         String?               @map("asset_class_metadata") @db.Text  // Dynamic routing metadata JSON
+
+  // Execution proof
+  executed              Boolean             @default(false)
+  executedAt            DateTime?           @map("executed_at")
+  executionHash         String?             @map("execution_hash")
+
+  // Solana anchor proof (Settlement→Notary bridge)
+  solanaSignature       String?             @map("solana_signature")
+  solanaAnchoredAt      DateTime?           @map("solana_anchored_at")
+  anchorPending         Boolean             @default(false) @map("anchor_pending")
+
+  @@index([createdAt])
+  @@map("settlements")
+}
+
+// ==================== USER PROFILES (UNIFIED VIEW) ====================
+// Consolidates role-specific data for easy access
+
+model UserProfile {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // User reference
+  userId          String    @unique @map("user_id")
+  
+  // Role
+  role            String    // FARMER, REALTOR, BUSINESS_OWNER, SOVEREIGN_INDIVIDUAL
+  
+  // Common fields
+  companyName     String?   @map("company_name")
+  
+  // Custom metrics (JSON object to store role-specific data)
+  dataInput       String?   @map("data_input") @db.Text // JSON: role-specific metrics
+  
+  // Carbon balance (aggregated from UserCarbonEntry)
+  carbonBalance   Float     @default(0) @map("carbon_balance")
+  
+  // Solana/Blockchain Audit Fields
+  solanaWallet    String?   @map("solana_wallet")
+  lastMintTxHash  String?   @map("last_mint_tx_hash")
+  totalMinted     Int       @default(0) @map("total_minted")
+  lastMintedAt    DateTime? @map("last_minted_at")
+  
+  @@index([role])
+  @@index([userId])
+  @@map("user_profiles")
+}
+
+// ==================== SOLANA PROOF OF AUDIT ====================
+
+model SolanaAuditProof {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  // User reference
+  userId          String    @map("user_id")
+  
+  // Transaction details
+  transactionHash String    @unique @map("transaction_hash")
+  programId       String    @map("program_id")
+  walletAddress   String    @map("wallet_address")
+  
+  // Audit type
+  auditType       String    @map("audit_type") // CARBON_CREDIT, LEGACY_AUDIT, RE_HOSPITALITY
+  carbonAmount    Float     @map("carbon_amount")
+  valueUsd        Float     @map("value_usd")
+  
+  // Metadata
+  metadataJson    String?   @map("metadata_json") @db.Text
+  blockHeight     Int?      @map("block_height")
+  
+  // Status
+  status          String    @default("PENDING") // PENDING, CONFIRMED, FAILED
+  confirmedAt     DateTime? @map("confirmed_at")
+  
+  @@index([userId])
+  @@index([status])
+  @@map("solana_audit_proofs")
+}
+
+
+// ==================== AETHEXER INGEST NONCE ====================
+
+model IngestNonce {
+  id          String    @id @default(uuid())
+  nonce       String    @unique
+  consumedAt  DateTime  @default(now()) @map("consumed_at")
+  sourceIp    String?   @map("source_ip")
+  walletHint  String?   @map("wallet_hint")  // First 8 chars of wallet for audit
+  expiresAt   DateTime  @map("expires_at")
+
+  @@index([nonce])
+  @@index([expiresAt])
+  @@map("ingest_nonces")
+}
+
+
+// ==================== TELEMETRY READINGS (Phase 4 — Live Data Center Telemetry) ====================
+
+// ==================== v2.4 ENUMS ====================
+
+enum DiscoveryTier {
+  PENDING_SOVEREIGN_REVIEW
+  AUTO_APPROVED
+}
+
+enum AssetSubClass {
+  VERTICAL_REAL_ESTATE
+  CASINO_COMPLEX
+  INDUSTRIAL_LOGISTICS
+}
+
+enum DiscoveryCategory {
+  EXCHANGE
+  SKYSCRAPER
+  CASINO
+}
+
+// ==================== v2.4 MACRO-ASSET DISCOVERY ====================
+
+model DiscoveryAsset {
+  id                String            @id @default(uuid())
+  symbol            String            @unique
+  name              String
+  category          DiscoveryCategory
+  location          String
+  estimatedValueUsd Float             @map("estimated_value_usd")
+  sovereignShare70  Float             @map("sovereign_share_70")
+  verdict           DiscoveryTier     @default(PENDING_SOVEREIGN_REVIEW)
+  subClassification String?           @map("sub_classification")
+  outreachSent      Boolean           @default(false) @map("outreach_sent")
+  settlementId      String?           @map("settlement_id")
+  settled           Boolean           @default(false)
+  settledAt         DateTime?         @map("settled_at")
+  approvedAt        DateTime?         @map("approved_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  @@map("discovery_assets")
+  @@index([verdict])
+  @@index([category])
+}
+
+// ==================== v2.4 AUDIT LOG ====================
+
+model AuditLog {
+  id              String    @id @default(uuid())
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Actor
+  actorId         String    @map("actor_id")
+  actorRole       UserRole  @map("actor_role")
+
+  // Event classification
+  eventType       String    @map("event_type")   // SUBMISSION_STATUS_CHANGE, SETTLEMENT_EXECUTED, BLOCKCHAIN_ANCHOR, ROLE_CHANGE, VERDICT_OVERRIDE
+  entityType      String    @map("entity_type")  // Submission, Settlement, User, TelemetryReading
+  entityId        String    @map("entity_id")
+
+  // Change payload
+  previousValue   String?   @map("previous_value") @db.Text
+  newValue        String?   @map("new_value") @db.Text
+  metadata        String?   @db.Text               // JSON: contextual metadata
+
+  // Audit hash for tamper detection
+  auditHash       String?   @map("audit_hash")
+
+  // Backtrace
+  backtraceId     String    @default("BT-C9C4C5") @map("backtrace_id")
+
+  @@index([actorId])
+  @@index([eventType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model TelemetryReading {
+  id                  String               @id @default(uuid())
+  nodeId              String               @map("node_id")
+  powerUsageKw        Float                @map("power_usage_kw")
+  pueRatio            Float                @map("pue_ratio")
+  carbonPerTradeG     Float                @map("carbon_per_trade_g")
+  gridIntensityScore  Float                @map("grid_intensity_score")
+  assetClass          SettlementAssetClass @default(PROPERTY_INDUSTRIAL) @map("asset_class")
+  assetClassMetadata  String?              @map("asset_class_metadata") @db.Text  // Dynamic routing metadata JSON per variant
+
+  // Sentinel verification
+  sentinelVerdict     String?              @map("sentinel_verdict")   // AUTO_APPROVED | PENDING_SOVEREIGN_REVIEW | SOVEREIGN_HOLD | PENDING_AUTHORIZATION | ESCROW_REVIEW | PENDING_PLATFORM_REVIEW | REJECTED
+  sentinelScore       Float?               @map("sentinel_score")     // Composite score 0-1
+  sentinelHash        String?              @map("sentinel_hash")      // SHA-256 audit hash
+
+  // Settlement (auto-triggered on AUTO_APPROVED)
+  settlementId        String?              @map("settlement_id")
+  settled             Boolean              @default(false)
+  settledAt           DateTime?            @map("settled_at")
+
+  // Auth metadata
+  authMethod          String?              @map("auth_method")        // protocol_key | field_key
+  sourceIp            String?              @map("source_ip")
+
+  createdAt           DateTime             @default(now()) @map("created_at")
+
+  @@index([nodeId])
+  @@index([nodeId, createdAt])
+  @@index([settled])
+  @@map("telemetry_readings")
+}
