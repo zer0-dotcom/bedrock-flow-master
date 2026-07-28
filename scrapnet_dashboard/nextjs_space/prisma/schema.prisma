@@ -1,7 +1,6 @@
 generator client {
     provider = "prisma-client-js"
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output = "/home/ubuntu/scrapnet_dashboard/nextjs_space/node_modules/.prisma/client"
 }
 
 datasource db {
@@ -406,7 +405,6 @@ model BiocharBatch {
   pyrolysisTempCelsius  Float    @map("pyrolysis_temp_celsius")
   hCorgRatio            Float    @map("h_corg_ratio")
   
-  // Calculated outputs
   effectiveDryWeightKg  Float    @map("effective_dry_weight_kg")
   biocharYieldKg        Float    @map("biochar_yield_kg")
   cdrCreditsTonnes      Float    @map("cdr_credits_tonnes")
@@ -1524,7 +1522,6 @@ model VibrationalEquity {
   debtErasureCompletedAt DateTime?        @map("debt_erasure_completed_at")
   stewardshipFundsUsed  Float?            @map("stewardship_funds_used")
   
-  // RWA Token output
   rwaTokenMinted        Boolean           @default(false) @map("rwa_token_minted")
   rwaTokenHash          String?           @map("rwa_token_hash")
   rwaTokenValueUsd      Float?            @map("rwa_token_value_usd")
@@ -1753,7 +1750,6 @@ model Submission {
   ingestProtocol        String?             @map("ingest_protocol")    // "aethexer-v1" or null for legacy
   ingestTimestamp       DateTime?           @map("ingest_timestamp")
 
-  // Full parser output
   parserResultJson      String?             @map("parser_result_json") @db.Text
 
   // Documents
