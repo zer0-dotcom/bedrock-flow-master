@@ -68,7 +68,7 @@ function buildForensicMemo(): string {
       baseline_mw: HUM_BASELINE_MW,
       threshold_pct: HUM_THRESHOLD_PERCENT,
       status: 'VERIFIED',
-      nodes: ['NYSE_MAHWAH', 'CME_AURORA'],
+      nodes: ['MEDIFLO_STANTON_01', 'MEDIFLO_OC_02'],
     },
     backtrace: BACKTRACE_ID,
     ts: Math.floor(Date.now() / 1000),
@@ -106,7 +106,7 @@ async function main() {
   console.log('▸ HUM BASELINE VERIFICATION');
   console.log('  Industrial Baseline :', HUM_BASELINE_MW, 'MW');
   console.log('  Trigger Threshold   :', HUM_THRESHOLD_PERCENT + '%');
-  console.log('  Anchored Nodes      : NYSE Mahwah, CME Aurora');
+  console.log('  Anchored Nodes      : MEDIFLO Stanton-01, MEDIFLO OC-02');
   console.log('  Verification Status : ✓ CONFIRMED');
   console.log();
 
@@ -238,7 +238,7 @@ async function main() {
   console.log('  Memo SHA-256         :', memoHash);
   console.log('  HUM Baseline         :', HUM_BASELINE_MW, 'MW ✓');
   console.log('  HUM Threshold        :', HUM_THRESHOLD_PERCENT + '% ✓');
-  console.log('  Anchored Nodes       : NYSE Mahwah, CME Aurora');
+  console.log('  Anchored Nodes       : MEDIFLO Stanton-01, MEDIFLO OC-02');
   console.log();
   console.log(line);
   console.log('  EXPLORER LINKS');

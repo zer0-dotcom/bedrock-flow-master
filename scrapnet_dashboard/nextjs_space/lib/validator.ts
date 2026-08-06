@@ -124,13 +124,15 @@ export const SovereignProfileOnboardingSchema = z.object({
     z.string().transform((v) => parseFloat(v) || 0),
     z.number(),
   ]).pipe(z.number().nonnegative('Annual utility baseline must be >= 0')),
+  // Deferred: monetary appraisal / sovereign-share derivation is NOT collected or
+  // exposed in the public deployment. These optional fields remain reserved for a
+  // future, partnership-gated tokenization phase and are not populated by onboarding.
   estimatedAppraisalValue: z.union([
     z.string().transform((v) => parseFloat(v) || 0),
     z.number(),
-  ]).pipe(z.number().nonnegative('Appraisal value must be >= 0')),
+  ]).pipe(z.number().nonnegative('Appraisal value must be >= 0')).optional(),
   propertyType: z.enum(['RESIDENTIAL', 'COMMERCIAL']).default('RESIDENTIAL'),
   solanaWallet: z.string().optional(),
-  // Derived: appraisalValue × 0.70
   sovereignShareCapacity: z.number().nonnegative().optional(),
   // Telemetry bridge fields
   telemetryBridge: z.string().optional(),

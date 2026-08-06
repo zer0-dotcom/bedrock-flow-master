@@ -25,7 +25,7 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
-type DiscoveryCategory = 'EXCHANGE' | 'SKYSCRAPER' | 'CASINO';
+type DiscoveryCategory = 'RECYCLING' | 'BIOCHAR' | 'METAL';
 
 interface DiscoveryAsset {
   id: string;
@@ -198,17 +198,17 @@ export default function AdminClient() {
 
   const getCategoryIcon = (cat: DiscoveryCategory) => {
     switch (cat) {
-      case 'EXCHANGE': return <Activity className="h-4 w-4" />;
-      case 'SKYSCRAPER': return <Building2 className="h-4 w-4" />;
-      case 'CASINO': return <Landmark className="h-4 w-4" />;
+      case 'RECYCLING': return <Activity className="h-4 w-4" />;
+      case 'BIOCHAR': return <Building2 className="h-4 w-4" />;
+      case 'METAL': return <Landmark className="h-4 w-4" />;
     }
   };
 
   const getCategoryColor = (cat: DiscoveryCategory) => {
     switch (cat) {
-      case 'EXCHANGE': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
-      case 'SKYSCRAPER': return 'text-violet-400 bg-violet-500/10 border-violet-500/30';
-      case 'CASINO': return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+      case 'RECYCLING': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
+      case 'BIOCHAR': return 'text-violet-400 bg-violet-500/10 border-violet-500/30';
+      case 'METAL': return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
     }
   };
 
@@ -304,7 +304,7 @@ export default function AdminClient() {
         <div className="rounded-xl bg-zinc-900/80 border border-zinc-700/50 p-4">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="h-4 w-4 text-emerald-400" />
-            <span className="text-[10px] text-zinc-400 uppercase tracking-wider">Total 70% Sovereign</span>
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider">Total Telemetry Credit Share</span>
           </div>
           <span className="text-xl font-bold text-emerald-400 font-mono">
             {formatUsd(assets.reduce((s, a) => s + a.sovereignShare70, 0))}
@@ -371,7 +371,7 @@ export default function AdminClient() {
                       <p className="text-sm font-bold font-mono text-white">{formatUsd(asset.estimatedValueUsd)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-emerald-500 uppercase">70% Sovereign</p>
+                      <p className="text-[10px] text-emerald-500 uppercase">Credit Share</p>
                       <p className="text-sm font-bold font-mono text-emerald-400">{formatUsd(asset.sovereignShare70)}</p>
                     </div>
                   </div>
@@ -435,7 +435,7 @@ export default function AdminClient() {
                   <th className="text-left py-2 px-3">Symbol</th>
                   <th className="text-left py-2 px-3">Name</th>
                   <th className="text-left py-2 px-3">Category</th>
-                  <th className="text-right py-2 px-3">70% Sovereign</th>
+                  <th className="text-right py-2 px-3">Credit Share</th>
                   <th className="text-left py-2 px-3">Settlement ID</th>
                   <th className="text-left py-2 px-3">Action</th>
                 </tr>

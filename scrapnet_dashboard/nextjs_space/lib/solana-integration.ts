@@ -228,12 +228,26 @@ function getSolanaConnection(): Connection {
  * initializes a Token-2022 mint with embedded metadata extension, mints tokens
  * to the Aethexer custodial escrow wallet, and anchors a backtrace memo.
  *
- * @param settlementId - The unique settlement ID (e.g. "DISC-MGM-LV-01-MQFLZI2P")
+ * @param settlementId - The unique settlement ID (e.g. "DISC-RAP-STAN-01-XXXXXX")
  * @returns SovereignMintResult with full transaction context
  */
 export async function mintSovereignAssetToken(
   settlementId: string
 ): Promise<SovereignMintResult> {
+  // ─── Deployment guard: monetary "sovereign asset" tokenization is DISABLED ───
+  // The public deployment does not mint tokens that embed a third-party asset name
+  // or an unverified monetary valuation into token metadata. This path is reserved
+  // for a future, partnership-gated tokenization phase and is opt-in only via an
+  // explicit environment flag. Telemetry / carbon-receipt minting is unaffected.
+  if (process.env.ENABLE_SOVEREIGN_ASSET_MINT !== 'true') {
+    throw new Error(
+      '[PROTOCOL DISABLED] Sovereign asset tokenization is not enabled in this deployment. ' +
+      'Tokens representing monetary asset valuations require formally established, verified ' +
+      'enterprise partnerships before they can be minted. Set ENABLE_SOVEREIGN_ASSET_MINT=true ' +
+      'only for an authorized, partnership-backed asset with a verified valuation.'
+    );
+  }
+
   // ─── Step 1: Database Query — Dual-path resolution ───
   // Path A: Settlement table (submission-based)
   // Path B: DiscoveryAsset table (discovery pipeline settlements)

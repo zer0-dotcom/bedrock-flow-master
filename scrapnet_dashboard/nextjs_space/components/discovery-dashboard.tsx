@@ -21,7 +21,7 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
-type DiscoveryCategory = 'EXCHANGE' | 'SKYSCRAPER' | 'CASINO';
+type DiscoveryCategory = 'RECYCLING' | 'BIOCHAR' | 'METAL';
 type DiscoveryVerdict = 'PENDING_SOVEREIGN_REVIEW' | 'AUTO_APPROVED';
 
 interface DiscoveryAsset {
@@ -145,17 +145,17 @@ export default function DiscoveryDashboard() {
 
   const getCategoryIcon = (cat: DiscoveryCategory) => {
     switch (cat) {
-      case 'EXCHANGE': return <Activity className="h-5 w-5" />;
-      case 'SKYSCRAPER': return <Building2 className="h-5 w-5" />;
-      case 'CASINO': return <Landmark className="h-5 w-5" />;
+      case 'RECYCLING': return <Activity className="h-5 w-5" />;
+      case 'BIOCHAR': return <Building2 className="h-5 w-5" />;
+      case 'METAL': return <Landmark className="h-5 w-5" />;
     }
   };
 
   const getCategoryColor = (cat: DiscoveryCategory) => {
     switch (cat) {
-      case 'EXCHANGE': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
-      case 'SKYSCRAPER': return 'text-violet-400 bg-violet-500/10 border-violet-500/30';
-      case 'CASINO': return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+      case 'RECYCLING': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
+      case 'BIOCHAR': return 'text-violet-400 bg-violet-500/10 border-violet-500/30';
+      case 'METAL': return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
     }
   };
 
@@ -182,7 +182,7 @@ export default function DiscoveryDashboard() {
         </div>
         <div className="flex items-center gap-3 text-sm">
           <div className="px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700">
-            <span className="text-zinc-400">Total 70% Sovereign Value:</span>{' '}
+            <span className="text-zinc-400">Total Telemetry Credit Share:</span>{' '}
             <span className="text-emerald-400 font-bold font-mono">{formatUsd(totalSovereignValue)}</span>
           </div>
         </div>
@@ -314,7 +314,7 @@ export default function DiscoveryDashboard() {
                 <p className="text-lg font-bold font-mono text-white mt-0.5">{formatUsd(asset.estimatedValueUsd)}</p>
               </div>
               <div className="rounded-lg bg-zinc-800/60 p-3">
-                <p className="text-[10px] text-emerald-500 uppercase tracking-wider">70% Sovereign Share</p>
+                <p className="text-[10px] text-emerald-500 uppercase tracking-wider">Telemetry Credit Share</p>
                 <p className="text-lg font-bold font-mono text-emerald-400 mt-0.5">{formatUsd(asset.sovereignShare70)}</p>
               </div>
             </div>

@@ -14,8 +14,8 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-type TickerCategory = 'EXCHANGE' | 'SKYSCRAPER' | 'CASINO';
-type FilterTab = 'ALL' | 'EXCHANGES' | 'SKYSCRAPERS' | 'CASINOS';
+type TickerCategory = 'RECYCLING' | 'BIOCHAR' | 'METAL';
+type FilterTab = 'ALL' | 'RECYCLING' | 'BIOCHAR' | 'METAL';
 
 interface TickerItem {
   id: string;
@@ -31,183 +31,43 @@ interface TickerItem {
   lastUpdated: number;
 }
 
-// ─── Seed Data (global exchanges + macro-asset discovery targets) ─────────
+// ─── Seed Data (MEDIFLO facility telemetry nodes) ─────────
 
 const SEED_TICKER_ITEMS: TickerItem[] = [
-  // Global Financial Exchanges
-  {
-    id: 'NYSE-01',
-    symbol: 'NYSE-01',
-    name: 'New York Stock Exchange',
-    category: 'EXCHANGE',
-    value: 18420.50,
-    change: 127.30,
-    changePercent: 0.70,
-    unit: 'MW',
-    verdict: 'AUTO_APPROVED',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'NASDAQ-01',
-    symbol: 'NASDAQ-01',
-    name: 'Nasdaq Composite',
-    category: 'EXCHANGE',
-    value: 14205.80,
-    change: -42.15,
-    changePercent: -0.30,
-    unit: 'MW',
-    verdict: 'AUTO_APPROVED',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'LSE-01',
-    symbol: 'LSE-01',
-    name: 'London Stock Exchange',
-    category: 'EXCHANGE',
-    value: 8840.20,
-    change: 56.40,
-    changePercent: 0.64,
-    unit: 'MW',
-    verdict: 'AUTO_APPROVED',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'CME-01',
-    symbol: 'CME-01',
-    name: 'Chicago Mercantile Exchange',
-    category: 'EXCHANGE',
-    value: 6120.00,
-    change: 18.90,
-    changePercent: 0.31,
-    unit: 'MW',
-    verdict: 'AUTO_APPROVED',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'EUREX-01',
-    symbol: 'EUREX-01',
-    name: 'Eurex Exchange',
-    category: 'EXCHANGE',
-    value: 4250.60,
-    change: -12.30,
-    changePercent: -0.29,
-    unit: 'MW',
-    verdict: 'AUTO_APPROVED',
-    lastUpdated: Date.now(),
-  },
-  // Skyscrapers (Variant B: VERTICAL_REAL_ESTATE)
-  {
-    id: 'BURJ-DXB-001',
-    symbol: 'BURJ-DXB-001',
-    name: 'Burj Khalifa — Dubai',
-    category: 'SKYSCRAPER',
-    value: 36800.00,
-    change: 245.00,
-    changePercent: 0.67,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'VERTICAL_REAL_ESTATE',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'TAI-101-TPE',
-    symbol: 'TAI-101-TPE',
-    name: 'Taipei 101 — Taiwan',
-    category: 'SKYSCRAPER',
-    value: 22500.00,
-    change: 180.00,
-    changePercent: 0.81,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'VERTICAL_REAL_ESTATE',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'OWT-NYC-001',
-    symbol: 'OWT-NYC-001',
-    name: 'One World Trade — NYC',
-    category: 'SKYSCRAPER',
-    value: 28400.00,
-    change: -95.00,
-    changePercent: -0.33,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'VERTICAL_REAL_ESTATE',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'SHA-TWR-001',
-    symbol: 'SHA-TWR-001',
-    name: 'Shanghai Tower — PRC',
-    category: 'SKYSCRAPER',
-    value: 34200.00,
-    change: 310.00,
-    changePercent: 0.91,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'VERTICAL_REAL_ESTATE',
-    lastUpdated: Date.now(),
-  },
-  // Casinos (Variant B: CASINO_COMPLEX)
-  {
-    id: 'MGM-LV-01',
-    symbol: 'MGM-LV-01',
-    name: 'MGM Grand — Las Vegas',
-    category: 'CASINO',
-    value: 42500.00,
-    change: 520.00,
-    changePercent: 1.24,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'CASINO_COMPLEX',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'VEN-MAC-01',
-    symbol: 'VEN-MAC-01',
-    name: 'The Venetian — Macau',
-    category: 'CASINO',
-    value: 38900.00,
-    change: -210.00,
-    changePercent: -0.54,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'CASINO_COMPLEX',
-    lastUpdated: Date.now(),
-  },
-  {
-    id: 'MBS-SGP-01',
-    symbol: 'MBS-SGP-01',
-    name: 'Marina Bay Sands — Singapore',
-    category: 'CASINO',
-    value: 35600.00,
-    change: 148.00,
-    changePercent: 0.42,
-    unit: 'kW',
-    verdict: 'PENDING_SOVEREIGN_REVIEW',
-    sub_classification: 'CASINO_COMPLEX',
-    lastUpdated: Date.now(),
-  },
+  // MEDIFLO-owned infrastructure telemetry nodes.
+  // Values are live thermal / energy-throughput readings per facility — not asset valuations.
+  // Reclaimed Asphalt (RAP) recycling
+  { id: 'RAP-STAN-01', symbol: 'RAP-STAN-01', name: 'Stanton RAP Reclamation Plant', category: 'RECYCLING', value: 1842.00, change: 12.70, changePercent: 0.69, unit: 'kW', verdict: 'AUTO_APPROVED', lastUpdated: Date.now() },
+  { id: 'RAP-OC-02', symbol: 'RAP-OC-02', name: 'Orange County Asphalt Line', category: 'RECYCLING', value: 1420.50, change: -4.20, changePercent: -0.30, unit: 'kW', verdict: 'AUTO_APPROVED', lastUpdated: Date.now() },
+  { id: 'RAP-INL-03', symbol: 'RAP-INL-03', name: 'Inland Empire RAP Drum', category: 'RECYCLING', value: 884.00, change: 5.60, changePercent: 0.64, unit: 'kW', verdict: 'AUTO_APPROVED', lastUpdated: Date.now() },
+  // Biochar / Carbon Dioxide Removal
+  { id: 'BIO-KILN-01', symbol: 'BIO-KILN-01', name: 'Biochar Pyrolysis Kiln A', category: 'BIOCHAR', value: 612.00, change: 4.10, changePercent: 0.67, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'CDR_PYROLYSIS', lastUpdated: Date.now() },
+  { id: 'BIO-KILN-02', symbol: 'BIO-KILN-02', name: 'Biochar Pyrolysis Kiln B', category: 'BIOCHAR', value: 368.00, change: 2.45, changePercent: 0.67, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'CDR_PYROLYSIS', lastUpdated: Date.now() },
+  { id: 'BIO-FEED-03', symbol: 'BIO-FEED-03', name: 'Feedstock Dryer Unit', category: 'BIOCHAR', value: 225.00, change: -1.80, changePercent: -0.79, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'CDR_PYROLYSIS', lastUpdated: Date.now() },
+  // Metal recovery
+  { id: 'MTL-FER-01', symbol: 'MTL-FER-01', name: 'Ferrous Recovery Line', category: 'METAL', value: 425.00, change: 5.20, changePercent: 1.24, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY', lastUpdated: Date.now() },
+  { id: 'MTL-NFR-02', symbol: 'MTL-NFR-02', name: 'Non-Ferrous Eddy Sorter', category: 'METAL', value: 389.00, change: -2.10, changePercent: -0.54, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY', lastUpdated: Date.now() },
+  { id: 'MTL-MELT-03', symbol: 'MTL-MELT-03', name: 'Induction Melt Unit', category: 'METAL', value: 356.00, change: 1.48, changePercent: 0.42, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY', lastUpdated: Date.now() },
 ];
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'ALL', label: 'ALL' },
-  { key: 'EXCHANGES', label: 'EXCHANGES' },
-  { key: 'SKYSCRAPERS', label: 'SKYSCRAPERS' },
-  { key: 'CASINOS', label: 'CASINOS' },
+  { key: 'RECYCLING', label: 'RECYCLING' },
+  { key: 'BIOCHAR', label: 'BIOCHAR' },
+  { key: 'METAL', label: 'METAL' },
 ];
 
 const CATEGORY_FILTER_MAP: Record<FilterTab, TickerCategory[] | null> = {
   ALL: null,
-  EXCHANGES: ['EXCHANGE'],
-  SKYSCRAPERS: ['SKYSCRAPER'],
-  CASINOS: ['CASINO'],
+  RECYCLING: ['RECYCLING'],
+  BIOCHAR: ['BIOCHAR'],
+  METAL: ['METAL'],
 };
 
 // ─── Micro-simulation: jitter values for live-feel ────────────────────────
 
 function jitterItem(item: TickerItem): TickerItem {
-  const volatility = item.category === 'EXCHANGE' ? 0.002 : 0.001;
+  const volatility = item.category === 'RECYCLING' ? 0.002 : 0.001;
   const delta = item.value * (Math.random() * volatility * 2 - volatility);
   const newValue = Math.max(0, item.value + delta);
   const newChange = item.change + delta;
@@ -325,17 +185,17 @@ export default function CockpitTicker() {
 
   const getCategoryIcon = (cat: TickerCategory) => {
     switch (cat) {
-      case 'EXCHANGE': return <Activity className="h-3.5 w-3.5" />;
-      case 'SKYSCRAPER': return <Building2 className="h-3.5 w-3.5" />;
-      case 'CASINO': return <Landmark className="h-3.5 w-3.5" />;
+      case 'RECYCLING': return <Activity className="h-3.5 w-3.5" />;
+      case 'BIOCHAR': return <Building2 className="h-3.5 w-3.5" />;
+      case 'METAL': return <Landmark className="h-3.5 w-3.5" />;
     }
   };
 
   const getCategoryColor = (cat: TickerCategory) => {
     switch (cat) {
-      case 'EXCHANGE': return 'text-cyan-400';
-      case 'SKYSCRAPER': return 'text-violet-400';
-      case 'CASINO': return 'text-amber-400';
+      case 'RECYCLING': return 'text-cyan-400';
+      case 'BIOCHAR': return 'text-violet-400';
+      case 'METAL': return 'text-amber-400';
     }
   };
 

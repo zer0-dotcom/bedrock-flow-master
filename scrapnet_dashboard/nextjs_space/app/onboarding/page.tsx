@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { resolveRole } from '@/lib/rbac';
 import {
   ChevronRight, ChevronLeft, CheckCircle2, Loader2, AlertCircle,
-  Zap, Lock, Shield, Wallet, Building2, Home, MapPin, DollarSign,
+  Zap, Lock, Shield, Wallet, Building2, Home, MapPin,
   QrCode, Server, Radio, Wifi, Terminal, Eye, Copy, ExternalLink,
   Smartphone, Network
 } from 'lucide-react';
@@ -20,7 +20,6 @@ type BmsProtocol = 'BACNET_IP' | 'MODBUS' | 'NIAGARA';
 interface PropertyData {
   streetAddress: string;
   annualUtilityBaseline: string;
-  estimatedAppraisalValue: string;
 }
 
 interface TelemetryConfig {
@@ -54,7 +53,6 @@ export default function OnboardingPage() {
   const [propertyData, setPropertyData] = useState<PropertyData>({
     streetAddress: '',
     annualUtilityBaseline: '',
-    estimatedAppraisalValue: '',
   });
 
   // Telemetry state
@@ -100,12 +98,6 @@ export default function OnboardingPage() {
   }, []);
 
   /* ─── Derived Values ───────────────────────────────────────────────────── */
-  const sovereignShare = useMemo(() => {
-    const val = parseFloat(propertyData.estimatedAppraisalValue);
-    if (isNaN(val) || val <= 0) return 0;
-    return val * 0.70;
-  }, [propertyData.estimatedAppraisalValue]);
-
   const canProceedStep1 = googleConnected || connected;
   const canProceedStep2 = propertyData.streetAddress.trim().length > 0;
   const canProceedStep3 = propertyType === 'RESIDENTIAL'
@@ -144,8 +136,6 @@ export default function OnboardingPage() {
           propertyType,
           streetAddress: propertyData.streetAddress,
           annualUtilityBaseline: propertyData.annualUtilityBaseline,
-          estimatedAppraisalValue: propertyData.estimatedAppraisalValue,
-          sovereignShareCapacity: sovereignShare,
           ...(connected && publicKey ? { solanaWallet: publicKey.toBase58() } : {}),
           ...(propertyType === 'COMMERCIAL' ? {
             bmsProtocol: telemetryConfig.bmsProtocol,
@@ -231,9 +221,9 @@ export default function OnboardingPage() {
                 <p className="text-white font-medium">{propertyType === 'RESIDENTIAL' ? 'Residential' : 'Commercial'}</p>
               </div>
               <div className="text-left">
-                <p className="text-gray-500">70% Sovereign Share</p>
+                <p className="text-gray-500">Annual Utility Baseline</p>
                 <p className="text-emerald-400 font-mono font-medium">
-                  ${sovereignShare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {propertyData.annualUtilityBaseline || '—'}
                 </p>
               </div>
               <div className="text-left">
@@ -463,40 +453,6 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    <DollarSign className="w-4 h-4 inline mr-1.5 text-gray-500" />
-                    Estimated Property Appraisal Value (USD)
-                  </label>
-                  <input
-                    type="number"
-                    value={propertyData.estimatedAppraisalValue}
-                    onChange={(e) => setPropertyData(p => ({ ...p, estimatedAppraisalValue: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl bg-[#0a0a0a] border border-gray-700 text-white placeholder-gray-600 focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 outline-none transition-all"
-                    placeholder="500,000"
-                    min="0"
-                  />
-                </div>
-
-                {/* Live Calc: 70% Sovereign Share */}
-                {sovereignShare > 0 && (
-                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/30">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wider">70% Sovereign Share Capacity</p>
-                        <p className="text-2xl font-bold text-emerald-400 font-mono mt-1">
-                          ${sovereignShare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-600">Appraisal × 0.70</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          ${parseFloat(propertyData.estimatedAppraisalValue || '0').toLocaleString('en-US')} × 0.70
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
