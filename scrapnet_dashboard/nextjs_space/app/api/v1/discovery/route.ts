@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const assets = await prisma.discoveryAsset.findMany({
       where,
-      orderBy: [{ category: 'asc' }, { estimatedValueUsd: 'desc' }],
+      orderBy: [{ category: 'asc' }, { createdAt: 'desc' }],
     });
 
     const pendingCount = await prisma.discoveryAsset.count({ where: { verdict: 'PENDING_SOVEREIGN_REVIEW' } });
@@ -39,8 +39,6 @@ export async function GET(request: NextRequest) {
         name: a.name,
         category: a.category,
         location: a.location,
-        estimatedValueUsd: a.estimatedValueUsd,
-        sovereignShare70: a.sovereignShare70,
         verdict: a.verdict,
         subClassification: a.subClassification,
         outreachSent: a.outreachSent,
@@ -164,11 +162,10 @@ export async function POST(request: NextRequest) {
     const now = new Date();
 
     for (const asset of pendingAssets) {
-      // Calculate 70/20/10 settlement on sovereign share
-      const totalValueUsd = asset.sovereignShare70;
-      const founderYieldUsd = Math.round(totalValueUsd * UNIVERSAL_SPLIT.FOUNDER_YIELD * 100) / 100;
-      const stewardshipUsd = Math.round(totalValueUsd * UNIVERSAL_SPLIT.STEWARDSHIP * 100) / 100;
-      const publicResilienceUsd = Math.round(totalValueUsd * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE * 100) / 100;
+      // Settlement tracking — no monetary valuation of third-party assets
+      const founderYieldUsd = 0;
+      const stewardshipUsd = 0;
+      const publicResilienceUsd = 0;
 
       const settlementId = `DISC-${asset.symbol}-${Date.now().toString(36).toUpperCase()}`;
 
@@ -193,7 +190,6 @@ export async function POST(request: NextRequest) {
         newVerdict: 'AUTO_APPROVED',
         settlement: {
           id: settlementId,
-          sovereignShare70Usd: totalValueUsd,
           split: {
             assetSovereign: founderYieldUsd,
             platformProcessor: stewardshipUsd,

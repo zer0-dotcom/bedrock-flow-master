@@ -55,8 +55,8 @@ interface DiscoveryAsset {
   name: string;
   category: DiscoveryCategory;
   location: string;
-  estimatedValueUsd: number;
-  sovereignShare70: number;
+  thermalWasteKw?: number;
+  carbonGhostMargin?: number;
   verdict: DiscoveryVerdict;
   subClassification?: string | null;
   outreachSent: boolean;
@@ -129,7 +129,7 @@ export default function DiscoveryDashboard() {
 
   const pendingCount = assets.filter((a) => a.verdict === 'PENDING_SOVEREIGN_REVIEW').length;
   const approvedCount = assets.filter((a) => a.verdict === 'AUTO_APPROVED').length;
-  const totalSovereignValue = assets.reduce((s, a) => s + a.sovereignShare70, 0);
+  const totalThermalWasteKw = assets.reduce((s, a) => s + (a.thermalWasteKw ?? 0), 0);
 
   const triggerOutreach = (id: string) => {
     setAssets((prev) =>
@@ -224,8 +224,8 @@ export default function DiscoveryDashboard() {
         </div>
         <div className="flex items-center gap-3 text-sm">
           <div className="px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700">
-            <span className="text-zinc-400">Total Telemetry Credit Share:</span>{' '}
-            <span className="text-emerald-400 font-bold font-mono">{formatUsd(totalSovereignValue)}</span>
+            <span className="text-zinc-400">Aggregate Thermal Waste:</span>{' '}
+            <span className="text-amber-400 font-bold font-mono">{totalThermalWasteKw.toLocaleString()} kW</span>
           </div>
         </div>
       </div>
@@ -352,12 +352,16 @@ export default function DiscoveryDashboard() {
             {/* Value Row */}
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="rounded-lg bg-zinc-800/60 p-3">
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Total Value</p>
-                <p className="text-lg font-bold font-mono text-white mt-0.5">{formatUsd(asset.estimatedValueUsd)}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Thermal Waste</p>
+                <p className="text-lg font-bold font-mono text-amber-400 mt-0.5">
+                  {asset.thermalWasteKw ? `${asset.thermalWasteKw.toLocaleString()} kW` : '— kW'}
+                </p>
               </div>
               <div className="rounded-lg bg-zinc-800/60 p-3">
-                <p className="text-[10px] text-emerald-500 uppercase tracking-wider">Telemetry Credit Share</p>
-                <p className="text-lg font-bold font-mono text-emerald-400 mt-0.5">{formatUsd(asset.sovereignShare70)}</p>
+                <p className="text-[10px] text-orange-500 uppercase tracking-wider">Carbon Ghost Margin</p>
+                <p className="text-lg font-bold font-mono text-orange-400 mt-0.5">
+                  {asset.carbonGhostMargin != null ? `${asset.carbonGhostMargin}%` : '—'}
+                </p>
               </div>
             </div>
 
