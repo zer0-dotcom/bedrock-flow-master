@@ -10,12 +10,17 @@ import {
   Minus,
   Zap,
   Activity,
+  Flame,
 } from 'lucide-react';
+import {
+  ENERGY_GHOST_TARGETS,
+  recommendAethexerProducts,
+} from '@/lib/energy-ghost-targets';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-type TickerCategory = 'RECYCLING' | 'BIOCHAR' | 'METAL';
-type FilterTab = 'ALL' | 'RECYCLING' | 'BIOCHAR' | 'METAL';
+type TickerCategory = 'RECYCLING' | 'BIOCHAR' | 'METAL' | 'ENERGY_GHOST';
+type FilterTab = 'ALL' | 'RECYCLING' | 'BIOCHAR' | 'METAL' | 'ENERGY_GHOST';
 
 interface TickerItem {
   id: string;
@@ -29,6 +34,11 @@ interface TickerItem {
   verdict: string;
   sub_classification?: string;
   lastUpdated: number;
+  // ENERGY_GHOST-only prospecting fields
+  carbonGhostMargin?: number;
+  facilityType?: string[];
+  recommended?: string[];
+  status?: 'PROSPECT' | 'ACTIVE' | 'CONTRACTED';
 }
 
 // ─── Seed Data (MEDIFLO facility telemetry nodes) ─────────
@@ -48,6 +58,24 @@ const SEED_TICKER_ITEMS: TickerItem[] = [
   { id: 'MTL-FER-01', symbol: 'MTL-FER-01', name: 'Ferrous Recovery Line', category: 'METAL', value: 425.00, change: 5.20, changePercent: 1.24, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY', lastUpdated: Date.now() },
   { id: 'MTL-NFR-02', symbol: 'MTL-NFR-02', name: 'Non-Ferrous Eddy Sorter', category: 'METAL', value: 389.00, change: -2.10, changePercent: -0.54, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY', lastUpdated: Date.now() },
   { id: 'MTL-MELT-03', symbol: 'MTL-MELT-03', name: 'Induction Melt Unit', category: 'METAL', value: 356.00, change: 1.48, changePercent: 0.42, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY', lastUpdated: Date.now() },
+  // Aethexer Energy Ghost scan PROSPECTS (third-party landmarks — no ownership,
+  // no valuation implied). Seeded from the shared prospect catalog.
+  ...ENERGY_GHOST_TARGETS.map((t) => ({
+    id: t.id,
+    symbol: t.symbol,
+    name: t.name,
+    category: 'ENERGY_GHOST' as TickerCategory,
+    value: t.thermalWasteKw,
+    change: 0,
+    changePercent: 0,
+    unit: t.unit,
+    verdict: t.verdict,
+    carbonGhostMargin: t.carbonGhostMargin,
+    facilityType: t.facilityType,
+    recommended: recommendAethexerProducts(t),
+    status: t.status,
+    lastUpdated: Date.now(),
+  })),
 ];
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
@@ -55,6 +83,7 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'RECYCLING', label: 'RECYCLING' },
   { key: 'BIOCHAR', label: 'BIOCHAR' },
   { key: 'METAL', label: 'METAL' },
+  { key: 'ENERGY_GHOST', label: 'ENERGY GHOST' },
 ];
 
 const CATEGORY_FILTER_MAP: Record<FilterTab, TickerCategory[] | null> = {
@@ -62,6 +91,7 @@ const CATEGORY_FILTER_MAP: Record<FilterTab, TickerCategory[] | null> = {
   RECYCLING: ['RECYCLING'],
   BIOCHAR: ['BIOCHAR'],
   METAL: ['METAL'],
+  ENERGY_GHOST: ['ENERGY_GHOST'],
 };
 
 // ─── Micro-simulation: jitter values for live-feel ────────────────────────
@@ -115,6 +145,10 @@ export default function CockpitTicker() {
               verdict: a.verdict as string,
               sub_classification: a.sub_classification as string | undefined,
               lastUpdated: a.lastUpdated as number,
+              carbonGhostMargin: a.carbonGhostMargin as number | undefined,
+              facilityType: a.facilityType as string[] | undefined,
+              recommended: a.recommended as string[] | undefined,
+              status: a.status as ('PROSPECT' | 'ACTIVE' | 'CONTRACTED') | undefined,
             })));
             const ids = new Set((payload.assets as Array<{id: string}>).map((a) => a.id));
             setFlashIds(ids);
@@ -188,6 +222,7 @@ export default function CockpitTicker() {
       case 'RECYCLING': return <Activity className="h-3.5 w-3.5" />;
       case 'BIOCHAR': return <Building2 className="h-3.5 w-3.5" />;
       case 'METAL': return <Landmark className="h-3.5 w-3.5" />;
+      case 'ENERGY_GHOST': return <Flame className="h-3.5 w-3.5" />;
     }
   };
 
@@ -196,6 +231,7 @@ export default function CockpitTicker() {
       case 'RECYCLING': return 'text-cyan-400';
       case 'BIOCHAR': return 'text-violet-400';
       case 'METAL': return 'text-amber-400';
+      case 'ENERGY_GHOST': return 'text-orange-400';
     }
   };
 
@@ -253,6 +289,51 @@ export default function CockpitTicker() {
           {tickerItems.map((item, idx) => {
             const isUp = item.change >= 0;
             const TrendIcon = item.change > 0 ? TrendingUp : item.change < 0 ? TrendingDown : Minus;
+
+            // ── ENERGY GHOST scan prospect (amber/orange card) ──────────────
+            if (item.category === 'ENERGY_GHOST') {
+              return (
+                <div
+                  key={`${item.id}-${idx}`}
+                  className={cn(
+                    'inline-flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-950/60 to-orange-950/40 border border-amber-500/40 hover:border-amber-400/60 shadow-sm shadow-amber-500/10 transition-all duration-300',
+                    flashIds.has(item.id) && 'ring-1 ring-amber-400/50'
+                  )}
+                >
+                  <span className="flex-shrink-0 text-orange-400">
+                    <Flame className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="text-[10px] font-bold tracking-wider text-amber-300 uppercase">
+                    ⚡ Energy Ghost Detected
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-100">{item.name}</span>
+                  {typeof item.carbonGhostMargin === 'number' && (
+                    <span className="text-[11px] font-mono text-orange-300">
+                      {item.carbonGhostMargin.toFixed(1)}% Carbon Ghost Margin
+                    </span>
+                  )}
+                  <span className="text-[11px] font-mono text-amber-200">
+                    {item.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} kW Thermal Waste
+                  </span>
+                  {item.recommended && item.recommended.length > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      {item.recommended.map((code) => (
+                        <span
+                          key={code}
+                          className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-orange-500/20 text-orange-300 border border-orange-500/30"
+                        >
+                          → {code}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    PROSPECT — AETHEXER SCAN TARGET
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={`${item.id}-${idx}`}

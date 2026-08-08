@@ -12,6 +12,11 @@
  */
 
 import crypto from 'crypto';
+import {
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from '@solana/web3.js';
 
 // ==================== UNIVERSAL LAW CONSTANTS ====================
 
@@ -2008,4 +2013,115 @@ export function verifyGeniusActCompliance(
   }
   
   return result;
+}
+
+// ==================== MODULE 6: DYNAMIC SPLIT EXECUTOR ====================
+
+/**
+ * Dynamic Split — build a dust-free multi-recipient SOL transfer.
+ *
+ * Distributes `totalLamports` across N recipients by basis points. The final
+ * recipient absorbs any rounding remainder so the sum of allocations exactly
+ * equals `totalLamports` (dust-free). Instructions are assembled with `.push()`
+ * into a `TransactionInstruction[]` — NEVER `.add()` — so the caller can drop
+ * them into a `Transaction`/`TransactionMessage` however they prefer.
+ *
+ * NOTE: This builds System Program transfer instructions using real
+ * `@solana/web3.js` `PublicKey` values at call site. It does NOT sign or send —
+ * that remains the caller's responsibility (network selection is gated
+ * elsewhere; this helper is network-agnostic).
+ */
+export interface DynamicSplitRecipient {
+  publicKey: string;   // base58 Solana public key string
+  basisPoints: number; // e.g. 7000 for 70%
+  label: string;
+}
+
+export interface DynamicSplitConfig {
+  recipients: DynamicSplitRecipient[];
+  totalLamports: number;
+  /** Optional funding source (base58). Defaults to a placeholder if omitted. */
+  fromPublicKey?: string;
+  memo?: string;
+}
+
+export interface DynamicSplitResult {
+  instructions: TransactionInstruction[];   // uses .push() pattern
+  allocations: Array<{ recipient: string; label: string; lamports: number; basisPoints: number }>;
+  totalLamports: number;
+  remainderHandled: boolean;
+  complianceStatus: 'COMPLIANT' | 'HIGH_FRICTION';
+}
+
+/**
+ * Build a System Program transfer instruction for a single recipient.
+ * Requires @solana/web3.js PublicKey at call site.
+ */
+function buildSystemTransferInstruction(
+  toPublicKey: string,
+  lamports: number,
+  fromPublicKey: string
+): TransactionInstruction {
+  return SystemProgram.transfer({
+    fromPubkey: new PublicKey(fromPublicKey),
+    toPubkey: new PublicKey(toPublicKey),
+    lamports,
+  });
+}
+
+export function executeDynamicSplit(config: DynamicSplitConfig): DynamicSplitResult {
+  // 1. Validate total basis points === 10000
+  const totalBps = config.recipients.reduce((sum, r) => sum + r.basisPoints, 0);
+  if (totalBps !== 10000) {
+    throw new Error(`DynamicSplit violation: basis points sum to ${totalBps}, must be 10000`);
+  }
+  if (config.recipients.length === 0) {
+    throw new Error('DynamicSplit violation: at least one recipient is required');
+  }
+  if (!Number.isInteger(config.totalLamports) || config.totalLamports < 0) {
+    throw new Error('DynamicSplit violation: totalLamports must be a non-negative integer');
+  }
+
+  // System Program transfers need a funding source. Callers that only want the
+  // allocation math (not a broadcastable tx) may omit it; use the SystemProgram
+  // id as a safe, non-signing placeholder in that case.
+  const fromPublicKey = config.fromPublicKey ?? SystemProgram.programId.toBase58();
+
+  // 2. Build instructions array using .push() — NEVER .add()
+  const instructions: TransactionInstruction[] = [];
+  const allocations: DynamicSplitResult['allocations'] = [];
+
+  let distributed = 0;
+  for (let i = 0; i < config.recipients.length; i++) {
+    const recipient = config.recipients[i];
+    let lamports: number;
+    if (i === config.recipients.length - 1) {
+      // Final recipient gets remainder to avoid dust
+      lamports = config.totalLamports - distributed;
+    } else {
+      lamports = Math.floor((config.totalLamports * recipient.basisPoints) / 10000);
+    }
+    distributed += lamports;
+
+    allocations.push({
+      recipient: recipient.publicKey,
+      label: recipient.label,
+      lamports,
+      basisPoints: recipient.basisPoints,
+    });
+
+    const instruction = buildSystemTransferInstruction(recipient.publicKey, lamports, fromPublicKey);
+    instructions.push(instruction); // .push() NOT .add()
+  }
+
+  // Dust-free guarantee: allocations must sum exactly to totalLamports
+  const remainderHandled = distributed === config.totalLamports;
+
+  return {
+    instructions,
+    allocations,
+    totalLamports: config.totalLamports,
+    remainderHandled,
+    complianceStatus: 'COMPLIANT',
+  };
 }

@@ -17,7 +17,32 @@ import {
   ShieldCheck,
   Trash2,
   X,
+  Flame,
+  Zap,
 } from 'lucide-react';
+
+// ─── Energy Ghost scan-target types (Aethexer prospects — no ownership) ────────
+
+interface AethexerProduct {
+  code: string;
+  label: string;
+  description: string;
+}
+
+interface ScanTarget {
+  id: string;
+  symbol: string;
+  name: string;
+  category: 'ENERGY_GHOST';
+  thermalWasteKw: number;
+  unit: string;
+  carbonGhostMargin: number;
+  facilityType: string[];
+  status: 'PROSPECT' | 'ACTIVE' | 'CONTRACTED';
+  recommended: string[];
+  recommendedProducts: AethexerProduct[];
+  onboardingLink: string;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
@@ -56,6 +81,10 @@ export default function DiscoveryDashboard() {
   const [approving, setApproving] = useState(false);
   const [approveResult, setApproveResult] = useState<string | null>(null);
 
+  // Energy Ghost scan targets (Aethexer prospects)
+  const [scanTargets, setScanTargets] = useState<ScanTarget[]>([]);
+  const [catalog, setCatalog] = useState<Record<string, AethexerProduct>>({});
+
   // PURGE modal state
   const [purgeModalOpen, setPurgeModalOpen] = useState(false);
   const [purgeInput, setPurgeInput] = useState('');
@@ -75,9 +104,22 @@ export default function DiscoveryDashboard() {
     }
   }, []);
 
+  const fetchScanTargets = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/discovery/scan-targets');
+      if (!res.ok) throw new Error('Failed to fetch scan targets');
+      const data = await res.json();
+      setScanTargets(data.targets || []);
+      setCatalog(data.catalog || {});
+    } catch (err) {
+      console.error('[Discovery] Scan-target fetch error:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAssets();
-  }, [fetchAssets]);
+    fetchScanTargets();
+  }, [fetchAssets, fetchScanTargets]);
 
   const filtered = useMemo(() => {
     if (filter === 'PENDING') return assets.filter((a) => a.verdict === 'PENDING_SOVEREIGN_REVIEW');
@@ -353,6 +395,107 @@ export default function DiscoveryDashboard() {
           </div>
         ))}
       </div>
+
+      {/* ── ENERGY GHOST SCANNER (Aethexer prospects) ─────────────────────────── */}
+      {scanTargets.length > 0 && (
+        <div className="space-y-4 pt-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-400" />
+              Energy Ghost Scanner
+            </h3>
+            <p className="text-sm text-zinc-400">
+              Aethexer thermal-scan prospects — public landmarks flagged for
+              product-fit review.
+            </p>
+            <p className="text-[11px] text-amber-400/80 leading-relaxed max-w-3xl">
+              MEDIFLO LLC asserts <span className="font-bold">no ownership, equity, or valuation</span>{' '}
+              over any facility listed below. Every entry is a{' '}
+              <span className="font-bold">PROSPECT</span> only. Thermal-waste and
+              carbon-ghost figures are Aethexer scan projections for prospecting —
+              not verified telemetry and not asset valuations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {scanTargets.map((t) => (
+              <div
+                key={t.id}
+                className="rounded-xl bg-gradient-to-br from-amber-950/40 to-orange-950/20 border border-amber-500/30 p-5 hover:border-amber-400/50 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400">
+                      <Flame className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{t.name}</h4>
+                      <span className="text-[10px] font-mono text-zinc-500">{t.symbol}</span>
+                    </div>
+                  </div>
+                  <span className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    <Zap className="h-3 w-3" />
+                    {t.status} — SCAN TARGET
+                  </span>
+                </div>
+
+                {/* Scan projections */}
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div className="rounded-lg bg-black/30 border border-amber-500/20 p-3">
+                    <p className="text-[10px] text-orange-400 uppercase tracking-wider">Carbon Ghost Margin</p>
+                    <p className="text-lg font-bold font-mono text-orange-300 mt-0.5">
+                      {t.carbonGhostMargin.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-black/30 border border-amber-500/20 p-3">
+                    <p className="text-[10px] text-amber-400 uppercase tracking-wider">Thermal Waste</p>
+                    <p className="text-lg font-bold font-mono text-amber-200 mt-0.5">
+                      {t.thermalWasteKw.toLocaleString()} <span className="text-xs">{t.unit}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Facility type tags */}
+                {t.facilityType.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {t.facilityType.map((f) => (
+                      <span
+                        key={f}
+                        className="text-[10px] font-mono text-zinc-400 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700"
+                      >
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Recommended Aethexer products */}
+                {t.recommendedProducts.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                      Recommended Aethexer Products
+                    </p>
+                    {t.recommendedProducts.map((p) => (
+                      <div
+                        key={p.code}
+                        className="rounded-lg bg-zinc-800/60 border border-zinc-700/50 p-2.5"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                            → {p.code}
+                          </span>
+                          <span className="text-xs font-semibold text-zinc-200">{p.label}</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-1 leading-snug">{p.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── PURGE CONFIRMATION MODAL ──────────────────────────────────────────── */}
       {purgeModalOpen && (

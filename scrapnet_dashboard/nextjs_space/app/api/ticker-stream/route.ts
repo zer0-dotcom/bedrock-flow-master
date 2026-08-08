@@ -2,30 +2,45 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest } from 'next/server';
 import { HUM_BASELINE_MW, SHIFT_THRESHOLD_PERCENT } from '@/services/hum-listener';
+import {
+  ENERGY_GHOST_TARGETS,
+  recommendAethexerProducts,
+  type FacilityType,
+} from '@/lib/energy-ghost-targets';
 
 /**
- * SSE endpoint — streams live MEDIFLO facility telemetry to the cockpit ticker.
- * Produces a JSON frame every 3–5s with jittered readings for all 12
- * seeded facility nodes. When any value shifts ≥5% from its baseline,
- * a "hum_anchor" event is emitted so the client can show the chain event.
+ * SSE endpoint — streams live MEDIFLO facility telemetry + Aethexer Energy Ghost
+ * scan prospects to the cockpit ticker. Produces a JSON frame every 3–5s with
+ * jittered readings. When any RECYCLING node shifts ≥5% from its baseline, a
+ * "hum_anchor" event is emitted so the client can show the chain event.
  *
  * Digital Hum tracker: 74,088t CO₂e/day across MEDIFLO facilities.
+ *
+ * FRAMING: ENERGY_GHOST entries are third-party landmarks shown STRICTLY as
+ * Aethexer thermal-scan PROSPECTS. MEDIFLO claims NO ownership, equity, or
+ * valuation over them; their numbers are prospecting scan projections only.
  */
 
 interface AssetSeed {
   id: string;
   symbol: string;
   name: string;
-  category: 'RECYCLING' | 'BIOCHAR' | 'METAL';
+  category: 'RECYCLING' | 'BIOCHAR' | 'METAL' | 'ENERGY_GHOST';
   baseValue: number;
   unit: string;
   verdict: string;
   sub_classification?: string;
+  // ENERGY_GHOST-only prospecting fields
+  carbonGhostMargin?: number;
+  facilityType?: FacilityType[];
+  recommended?: string[];
+  status?: 'PROSPECT' | 'ACTIVE' | 'CONTRACTED';
+  onboardingLink?: string;
 }
 
 // MEDIFLO-owned infrastructure telemetry nodes. Values are live thermal /
 // energy-throughput readings measured at each facility — not asset valuations.
-const ASSETS: AssetSeed[] = [
+const MEDIFLO_NODES: AssetSeed[] = [
   { id: 'RAP-STAN-01', symbol: 'RAP-STAN-01', name: 'Stanton RAP Reclamation Plant', category: 'RECYCLING', baseValue: 1842.0, unit: 'kW', verdict: 'AUTO_APPROVED' },
   { id: 'RAP-OC-02', symbol: 'RAP-OC-02', name: 'Orange County Asphalt Line', category: 'RECYCLING', baseValue: 1420.5, unit: 'kW', verdict: 'AUTO_APPROVED' },
   { id: 'RAP-INL-03', symbol: 'RAP-INL-03', name: 'Inland Empire RAP Drum', category: 'RECYCLING', baseValue: 884.0, unit: 'kW', verdict: 'AUTO_APPROVED' },
@@ -37,11 +52,30 @@ const ASSETS: AssetSeed[] = [
   { id: 'MTL-MELT-03', symbol: 'MTL-MELT-03', name: 'Induction Melt Unit', category: 'METAL', baseValue: 356.0, unit: 'kW', verdict: 'AUTO_APPROVED', sub_classification: 'METAL_RECOVERY' },
 ];
 
+// Aethexer Energy Ghost scan prospects (third-party landmarks — PROSPECT only).
+// baseValue mirrors thermalWasteKw so the ticker can jitter it like any reading.
+const ENERGY_GHOST_NODES: AssetSeed[] = ENERGY_GHOST_TARGETS.map((t) => ({
+  id: t.id,
+  symbol: t.symbol,
+  name: t.name,
+  category: 'ENERGY_GHOST',
+  baseValue: t.thermalWasteKw,
+  unit: t.unit,
+  verdict: t.verdict,
+  carbonGhostMargin: t.carbonGhostMargin,
+  facilityType: t.facilityType,
+  recommended: recommendAethexerProducts(t),
+  status: t.status,
+  onboardingLink: '/onboarding',
+}));
+
+const ASSETS: AssetSeed[] = [...MEDIFLO_NODES, ...ENERGY_GHOST_NODES];
+
 // Track cumulative drift for anchor detection
 const driftState: Record<string, number> = {};
 
 function jitter(base: number, category: string): { value: number; change: number; changePercent: number } {
-  const vol = category === 'RECYCLING' ? 0.003 : 0.0015;
+  const vol = category === 'RECYCLING' ? 0.003 : category === 'ENERGY_GHOST' ? 0.004 : 0.0015;
   const delta = base * (Math.random() * vol * 2 - vol);
   const value = Math.max(0, base + delta);
   return {
