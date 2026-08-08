@@ -1,0 +1,19 @@
+[Unit]
+Description=Bedrock ESG Flow — MEDIFLO Dashboard
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/home/ubuntu
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/bedrock-flow-master/scrapnet_dashboard/nextjs_space
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=NEXT_DIST_DIR=.build
+EnvironmentFile=-/home/ubuntu/bedrock-flow-master/scrapnet_dashboard/nextjs_space/.env
+ExecStart=/usr/bin/env npx next start --port 3000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
