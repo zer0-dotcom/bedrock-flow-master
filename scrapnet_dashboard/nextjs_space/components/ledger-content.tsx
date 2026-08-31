@@ -76,6 +76,18 @@ interface LedgerStats {
   };
 }
 
+// Live BPS table shape returned by /api/ledger?action=split (contractConfig).
+interface BpsTableView {
+  earnerBps: number;
+  nodeBps: number;
+  depinBps: number;
+  earnerPct: number;
+  nodePct: number;
+  depinPct: number;
+  label: string;
+  customLegs?: { name: string; bps: number }[];
+}
+
 interface LedgerEntry {
   id: string;
   entryId: string;
@@ -142,15 +154,18 @@ export default function LedgerContent() {
   const [hoveredPulse, setHoveredPulse] = useState<PulseEntry | null>(null);
   const [settlementVelocity, setSettlementVelocity] = useState(2.5);
   const [settlementLatency, setSettlementLatency] = useState(150);
+  // Live operator-configured BPS table (no hardcoded 70/20/10 in the UI).
+  const [bpsTable, setBpsTable] = useState<BpsTableView | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, entriesRes, complianceRes, v2StatsRes, pulseRes] = await Promise.all([
+      const [statsRes, entriesRes, complianceRes, v2StatsRes, pulseRes, splitRes] = await Promise.all([
         fetch('/api/ledger?action=stats'),
         fetch('/api/ledger?action=entries&limit=20'),
         fetch('/api/ledger?action=compliance'),
         fetch('/api/ledger?action=v2-stats'),
         fetch('/api/ledger?action=pulse-strings&limit=20'),
+        fetch('/api/ledger?action=split'),
       ]);
 
       const statsData = await statsRes.json();
@@ -158,12 +173,14 @@ export default function LedgerContent() {
       const complianceData = await complianceRes.json();
       const v2StatsData = await v2StatsRes.json();
       const pulseData = await pulseRes.json();
+      const splitData = await splitRes.json();
 
       setStats(statsData);
       setEntries(entriesData.entries || []);
       setHighFrictionEntries(complianceData.highFrictionEntries || []);
       setV2Stats(v2StatsData);
       setPulseStrings(pulseData.pulses || []);
+      if (splitData?.bpsTable) setBpsTable(splitData.bpsTable as BpsTableView);
 
       // Simulate velocity/latency updates
       setSettlementVelocity(Math.random() * 8 + 1);
@@ -351,7 +368,7 @@ export default function LedgerContent() {
       {/* Living Organism Overview */}
       {activeTab === 'organism' && stats && (
         <div className="space-y-6">
-          {/* 70/20/10 Universal Law Banner - Sovereign Style */}
+          {/* Dynamic BPS Settlement Allocation Banner - Sovereign Style */}
           <div className="relative bg-gradient-to-r from-[hsl(225,25%,8%)] via-[hsl(225,25%,10%)] to-[hsl(225,25%,8%)] rounded-xl p-6 border border-cyan-500/20 overflow-hidden">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMjIiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTR2Mkgy0di0yaDEyem0wLTR2Mkgy0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-20" />
             <div className="relative flex items-center gap-4 mb-6">
@@ -360,14 +377,16 @@ export default function LedgerContent() {
               </div>
               <div>
                 <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-amber-400 bg-clip-text text-transparent">
-                  The 70/20/10 Universal Law
+                  Dynamic BPS Settlement Allocation
                 </h2>
-                <p className="text-gray-500 text-sm">Every unit of value split at the atomic level</p>
+                <p className="text-gray-500 text-sm">
+                  Operator-configured split{bpsTable ? ` (${bpsTable.label})` : ''} — 10,000 BPS immutable floor
+                </p>
               </div>
             </div>
             <div className="relative grid grid-cols-3 gap-4">
               <div className="pentagon-card p-4 border-emerald-500/40">
-                <div className="text-4xl font-bold text-emerald-400">70%</div>
+                <div className="text-4xl font-bold text-emerald-400">{bpsTable ? `${bpsTable.earnerPct}%` : '—'}</div>
                 <div className="text-sm font-medium text-emerald-300 mt-1">Asset Sovereign</div>
                 <div className="text-xs text-gray-500 mt-2">Direct liquidity for the source of energy</div>
                 <div className="text-xs text-emerald-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>
@@ -376,7 +395,7 @@ export default function LedgerContent() {
                 </div>
               </div>
               <div className="pentagon-card p-4 border-amber-500/40">
-                <div className="text-4xl font-bold text-amber-400">20%</div>
+                <div className="text-4xl font-bold text-amber-400">{bpsTable ? `${bpsTable.nodePct}%` : '—'}</div>
                 <div className="text-sm font-medium text-amber-300 mt-1">Platform Processor</div>
                 <div className="text-xs text-gray-500 mt-2">Node hardening + Debt-Erasure Protocol</div>
                 <div className="text-xs text-amber-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>
@@ -385,7 +404,7 @@ export default function LedgerContent() {
                 </div>
               </div>
               <div className="pentagon-card p-4 border-cyan-500/40">
-                <div className="text-4xl font-bold text-cyan-400">10%</div>
+                <div className="text-4xl font-bold text-cyan-400">{bpsTable ? `${bpsTable.depinPct}%` : '—'}</div>
                 <div className="text-sm font-medium text-cyan-300 mt-1">Public Resilience</div>
                 <div className="text-xs text-gray-500 mt-2">Non-custodial routing to Public Resilience</div>
                 <div className="text-xs text-cyan-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>

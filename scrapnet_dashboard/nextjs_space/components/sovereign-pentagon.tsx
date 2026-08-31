@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Factory,
@@ -55,6 +55,25 @@ export default function SovereignPentagon({
   const center = size / 2;
   const outerRadius = size * 0.38;
   const innerRadius = size * 0.15;
+
+  // Live BPS allocation label — never hardcoded. Sourced from runtime config.
+  const [bpsLabel, setBpsLabel] = useState<string>('—');
+  useEffect(() => {
+    let active = true;
+    fetch('/api/ledger?action=split')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        const label = data?.bpsTable?.label ?? data?.universalLaw;
+        if (typeof label === 'string' && label.length > 0) setBpsLabel(label);
+      })
+      .catch(() => {
+        /* keep placeholder on failure */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Calculate pentagon points
   const pentagonPoints = useMemo(() => {
@@ -185,7 +204,7 @@ export default function SovereignPentagon({
 
         {/* Center hub */}
         <circle cx={center} cy={center} r={20} fill="hsl(225 25% 10%)" stroke="hsl(175 95% 50% / 0.5)" strokeWidth="2" />
-        <text x={center} y={center + 5} textAnchor="middle" className="fill-cyan-400 text-xs font-bold">70/20/10</text>
+        <text x={center} y={center + 5} textAnchor="middle" className="fill-cyan-400 text-xs font-bold">{bpsLabel}</text>
       </svg>
 
       {/* Node labels around the pentagon */}

@@ -17,6 +17,10 @@ import {
   SystemProgram,
   TransactionInstruction,
 } from '@solana/web3.js';
+import {
+  BpsDistributionConfig,
+  getBpsConfig,
+} from './bps-config';
 
 // ==================== UNIVERSAL LAW CONSTANTS ====================
 
@@ -2015,49 +2019,117 @@ export function verifyGeniusActCompliance(
   return result;
 }
 
-// ==================== MODULE 6: DYNAMIC SPLIT EXECUTOR ====================
+
+// ==================== MODULE 6: DYNAMIC BPS SETTLEMENT EXECUTOR ====================
 
 /**
- * Dynamic Split — build a dust-free multi-recipient SOL transfer.
+ * Dynamic BPS Settlement Executor
  *
- * Distributes `totalLamports` across N recipients by basis points. The final
- * recipient absorbs any rounding remainder so the sum of allocations exactly
- * equals `totalLamports` (dust-free). Instructions are assembled with `.push()`
- * into a `TransactionInstruction[]` — NEVER `.add()` — so the caller can drop
- * them into a `Transaction`/`TransactionMessage` however they prefer.
+ * The historic 70/20/10 split (EARNER 7000 / NODE 2000 / DEPIN 1000) is
+ * DEPRECATED. Splits are now fully operator-configured at runtime via
+ * `BpsDistributionConfig` (see `lib/bps-config.ts`). The ONLY immutable floor
+ * is that all legs — EARNER + NODE + DEPIN + any customLegs — sum to exactly
+ * 10,000 BPS. `assertBpsIntegrity()` enforces this and HARD-THROWS on any
+ * deviation; it is the canon circuit breaker and runs first on every split.
  *
- * NOTE: This builds System Program transfer instructions using real
- * `@solana/web3.js` `PublicKey` values at call site. It does NOT sign or send —
- * that remains the caller's responsibility (network selection is gated
- * elsewhere; this helper is network-agnostic).
+ * Legs are assembled with `.push()` (NEVER `.add()`). Each leg receives
+ * floor(grossLamports * bps / 10000); the rounding remainder (dust) is routed
+ * in full to the EARNER leg so the sum of legs exactly equals grossLamports.
  */
-export interface DynamicSplitRecipient {
-  publicKey: string;   // base58 Solana public key string
-  basisPoints: number; // e.g. 7000 for 70%
-  label: string;
+
+export interface BpsSettlementLeg {
+  name: string;      // EARNER | NODE | DEPIN | <custom>
+  bps: number;       // operator-configured basis points for this leg
+  lamports: number;  // computed allocation (EARNER absorbs dust remainder)
 }
 
-export interface DynamicSplitConfig {
-  recipients: DynamicSplitRecipient[];
-  totalLamports: number;
-  /** Optional funding source (base58). Defaults to a placeholder if omitted. */
-  fromPublicKey?: string;
-  memo?: string;
-}
-
-export interface DynamicSplitResult {
-  instructions: TransactionInstruction[];   // uses .push() pattern
-  allocations: Array<{ recipient: string; label: string; lamports: number; basisPoints: number }>;
-  totalLamports: number;
-  remainderHandled: boolean;
-  complianceStatus: 'COMPLIANT' | 'HIGH_FRICTION';
+export interface DynamicBpsSplitResult {
+  legs: BpsSettlementLeg[];       // assembled via .push()
+  grossLamports: number;
+  totalBps: number;               // always 10000 (asserted)
+  distributedLamports: number;    // sum of all leg lamports === grossLamports
+  earnerLamports: number;         // EARNER leg total (incl. dust remainder)
+  dustLamports: number;           // remainder routed to EARNER
+  remainderRoutedToEarner: boolean;
+  complianceStatus: 'COMPLIANT';
 }
 
 /**
- * Build a System Program transfer instruction for a single recipient.
- * Requires @solana/web3.js PublicKey at call site.
+ * Immutable canon: the sum of EARNER + NODE + DEPIN + all customLegs basis
+ * points MUST equal exactly 10,000. Throws otherwise. Returns the verified
+ * total for convenience.
  */
-function buildSystemTransferInstruction(
+export function assertBpsIntegrity(config: BpsDistributionConfig): number {
+  const customTotal = (config.customLegs ?? []).reduce(
+    (sum, leg) => sum + (Number(leg.bps) || 0),
+    0
+  );
+  const totalBps = config.earnerBps + config.nodeBps + config.depinBps + customTotal;
+  if (totalBps !== 10000) {
+    throw new Error(
+      `BPS integrity violation: legs sum to ${totalBps} basis points, must equal 10000 (immutable floor).`
+    );
+  }
+  return totalBps;
+}
+
+/**
+ * Execute a dust-free dynamic BPS split of `grossLamports` across the
+ * operator-configured legs. Defaults to the live runtime config.
+ */
+export function executeDynamicBpsSplit(
+  grossLamports: number,
+  config: BpsDistributionConfig = getBpsConfig()
+): DynamicBpsSplitResult {
+  // 1. Immutable canon check FIRST — hard-throws unless total === 10000.
+  const totalBps = assertBpsIntegrity(config);
+
+  if (!Number.isInteger(grossLamports) || grossLamports < 0) {
+    throw new Error('DynamicBpsSplit violation: grossLamports must be a non-negative integer');
+  }
+
+  // 2. Assemble legs with .push() — NEVER .add(). EARNER is first so it can
+  //    absorb the dust remainder.
+  const legs: BpsSettlementLeg[] = [];
+  legs.push({ name: 'EARNER', bps: config.earnerBps, lamports: 0 });
+  legs.push({ name: 'NODE', bps: config.nodeBps, lamports: 0 });
+  legs.push({ name: 'DEPIN', bps: config.depinBps, lamports: 0 });
+  for (const custom of config.customLegs ?? []) {
+    legs.push({ name: custom.name, bps: custom.bps, lamports: 0 });
+  }
+
+  // 3. Floor each leg allocation.
+  let distributed = 0;
+  for (const leg of legs) {
+    leg.lamports = Math.floor((grossLamports * leg.bps) / 10000);
+    distributed += leg.lamports;
+  }
+
+  // 4. Route the dust remainder to the EARNER leg (index 0).
+  const dust = grossLamports - distributed;
+  legs[0].lamports += dust;
+  distributed += dust;
+
+  return {
+    legs,
+    grossLamports,
+    totalBps,
+    distributedLamports: distributed,
+    earnerLamports: legs[0].lamports,
+    dustLamports: dust,
+    remainderRoutedToEarner: true,
+    complianceStatus: 'COMPLIANT',
+  };
+}
+
+/**
+ * Build a System Program transfer instruction for a single leg. Retained for
+ * callers that hold vault addresses server-side and want broadcastable
+ * instructions. Uses real `@solana/web3.js` `PublicKey` values at call site;
+ * does NOT sign or send (network selection is gated elsewhere). Instructions
+ * are collected with `.push()` by the caller — never `.add()`.
+ */
+export function buildBpsTransferInstruction(
   toPublicKey: string,
   lamports: number,
   fromPublicKey: string
@@ -2067,61 +2139,4 @@ function buildSystemTransferInstruction(
     toPubkey: new PublicKey(toPublicKey),
     lamports,
   });
-}
-
-export function executeDynamicSplit(config: DynamicSplitConfig): DynamicSplitResult {
-  // 1. Validate total basis points === 10000
-  const totalBps = config.recipients.reduce((sum, r) => sum + r.basisPoints, 0);
-  if (totalBps !== 10000) {
-    throw new Error(`DynamicSplit violation: basis points sum to ${totalBps}, must be 10000`);
-  }
-  if (config.recipients.length === 0) {
-    throw new Error('DynamicSplit violation: at least one recipient is required');
-  }
-  if (!Number.isInteger(config.totalLamports) || config.totalLamports < 0) {
-    throw new Error('DynamicSplit violation: totalLamports must be a non-negative integer');
-  }
-
-  // System Program transfers need a funding source. Callers that only want the
-  // allocation math (not a broadcastable tx) may omit it; use the SystemProgram
-  // id as a safe, non-signing placeholder in that case.
-  const fromPublicKey = config.fromPublicKey ?? SystemProgram.programId.toBase58();
-
-  // 2. Build instructions array using .push() — NEVER .add()
-  const instructions: TransactionInstruction[] = [];
-  const allocations: DynamicSplitResult['allocations'] = [];
-
-  let distributed = 0;
-  for (let i = 0; i < config.recipients.length; i++) {
-    const recipient = config.recipients[i];
-    let lamports: number;
-    if (i === config.recipients.length - 1) {
-      // Final recipient gets remainder to avoid dust
-      lamports = config.totalLamports - distributed;
-    } else {
-      lamports = Math.floor((config.totalLamports * recipient.basisPoints) / 10000);
-    }
-    distributed += lamports;
-
-    allocations.push({
-      recipient: recipient.publicKey,
-      label: recipient.label,
-      lamports,
-      basisPoints: recipient.basisPoints,
-    });
-
-    const instruction = buildSystemTransferInstruction(recipient.publicKey, lamports, fromPublicKey);
-    instructions.push(instruction); // .push() NOT .add()
-  }
-
-  // Dust-free guarantee: allocations must sum exactly to totalLamports
-  const remainderHandled = distributed === config.totalLamports;
-
-  return {
-    instructions,
-    allocations,
-    totalLamports: config.totalLamports,
-    remainderHandled,
-    complianceStatus: 'COMPLIANT',
-  };
 }

@@ -6,7 +6,6 @@ import {
   calculateParticipation,
   generateImpactReport,
   verifyZeroGreedPolicy,
-  getUniversalSplit,
   calculateLegacyAudit,
   calculateVibrationalEquity,
   processParametricInsurance,
@@ -19,6 +18,7 @@ import {
   VibrationalEquityInput,
   ParametricInsuranceInput,
 } from '@/lib/universal-law';
+import { getBpsTable } from '@/lib/bps-config';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -50,9 +50,19 @@ export async function GET(request: NextRequest) {
 
     switch (action) {
       case 'split': {
+        // DYNAMIC BPS — read the live operator-configured table. No hardcoded
+        // percentages: the label and every leg percentage derive from the
+        // runtime config (defaults safely to a valid 10,000-sum table).
+        const bpsTable = getBpsTable();
         return NextResponse.json({
-          universalLaw: '70/20/10',
-          split: getUniversalSplit(),
+          universalLaw: bpsTable.label,
+          contractConfig: { bpsTable },
+          bpsTable,
+          split: {
+            founderYield: bpsTable.earnerPct,
+            stewardship: bpsTable.nodePct,
+            publicResilience: bpsTable.depinPct,
+          },
           description: {
             verifiedAssetValue: 'Direct liquidity for the source of energy',
             stewardship: 'Maintenance of Bedrock ESG/Unicon/Freality nodes',

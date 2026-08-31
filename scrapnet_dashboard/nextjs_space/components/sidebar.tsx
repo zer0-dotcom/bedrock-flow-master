@@ -411,11 +411,11 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Consolidated Ledger Section - 70/20/10 Law */}
+        {/* Consolidated Ledger Section - Dynamic BPS Allocation */}
         {hasService('LEDGER') && (
           <div>
             <h3 className="px-4 text-xs font-semibold uppercase tracking-wider text-amber-400/60 mb-2 flex items-center gap-2">
-              <Scale className="h-3 w-3" /> Compliance (70/20/10)
+              <Scale className="h-3 w-3" /> Compliance (Dynamic BPS)
             </h3>
             <div className="space-y-1">
               {ledgerNavItems.map((item) => {
@@ -478,7 +478,7 @@ export default function Sidebar() {
         {hasService('LEDGER') && (
           <div className="rounded-lg bg-amber-500/10 p-2">
             <p className="text-xs font-semibold text-amber-300">Consolidated Ledger</p>
-            <p className="text-xs text-amber-300/80">70/20/10 Split</p>
+            <p className="text-xs text-amber-300/80">Dynamic BPS Split</p>
           </div>
         )}
       </div>
