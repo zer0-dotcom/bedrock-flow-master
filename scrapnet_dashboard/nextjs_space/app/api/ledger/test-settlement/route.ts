@@ -564,7 +564,7 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
       
-      // Validate 70/20/10 split
+      // Validate the Dynamic BPS split (Σ = 10,000 BPS)
       const total = settlement.gross_value_usd;
       const expectedFounder = total * 0.70;
       const expectedStewardship = total * 0.20;

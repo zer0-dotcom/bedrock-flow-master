@@ -25,6 +25,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBpsTable } from '@/lib/use-bps-table';
 
 interface LedgerStats {
   totalKmAvoided: number;
@@ -117,6 +118,7 @@ const JURISDICTION_FLAGS: Record<string, string> = {
 };
 
 export default function GlobalLedgerContent() {
+  const bpsTable = useBpsTable();
   const [stats, setStats] = useState<LedgerStats | null>(null);
   const [regions, setRegions] = useState<RegionData[]>([]);
   
@@ -878,7 +880,7 @@ export default function GlobalLedgerContent() {
                       )}
                     </div>
                     <div className="bg-slate-900/50 rounded-lg p-4">
-                      <p className="text-slate-400 text-sm mb-2">Credit Split (70/20/10)</p>
+                      <p className="text-slate-400 text-sm mb-2">Credit Split ({bpsTable ? bpsTable.label : 'Dynamic BPS'})</p>
                       <div className="space-y-1 text-sm">
                         <p className="text-emerald-400">Bank: {backtraceResult.trace.creditSplit.bankShare?.toFixed(4) || 0}</p>
                         <p className="text-cyan-400">Platform: {backtraceResult.trace.creditSplit.platformShare?.toFixed(4) || 0}</p>

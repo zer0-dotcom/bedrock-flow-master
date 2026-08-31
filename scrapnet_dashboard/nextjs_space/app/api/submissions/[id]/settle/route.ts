@@ -7,15 +7,16 @@ import { anchorToChain, hashForAnchor, getNotaryStatus } from '@/lib/solana-nota
 import { logSettlementExecution, logBlockchainAnchor } from '@/lib/audit-logger';
 
 /**
- * 70/20/10 SMART SETTLEMENT ENGINE (BT-C9C4C5 v2.2)
+ * DYNAMIC BPS SMART SETTLEMENT ENGINE (BT-C9C4C5 v2.2)
  *
- * On final forensic verification, distributes value:
- *   70% → Asset Sovereign (Verified Asset Holder)
- *   20% → Platform Processor
- *   10% → Public Resilience (singular block — dynamic routing by asset_class at metadata level)
+ * On final forensic verification, distributes value across the live
+ * operator-configured Dynamic BPS legs (Σ = 10,000 BPS):
+ *   → Asset Sovereign (Verified Asset Holder)
+ *   → Platform Processor
+ *   → Public Resilience (singular block — dynamic routing by asset_class at metadata level)
  *
  * Public Resilience Rule: If no specialist ID is present,
- * the 10% auto-routes to Public Resilience Pool.
+ * the Public Resilience leg auto-routes to the Public Resilience Pool.
  *
  * GATES (both must pass):
  *   1. Forensic Verification — FORENSIC_VERIFIED status (or forceVerify bypass)
@@ -114,6 +115,13 @@ export async function POST(
     const treasuryShare = Math.round(totalValue * 0.2 * 100) / 100;
     const specialistShare =
       Math.round((totalValue - assetOwnerShare - treasuryShare) * 100) / 100;
+    // Derive display percentages from the ACTUAL computed shares — never hardcode
+    // a fixed ratio. Dust remainder lands in the specialist/public-resilience leg.
+    const pctLabel = (share: number): string =>
+      totalValue > 0 ? `${((share / totalValue) * 100).toFixed(0)}%` : '—';
+    const assetOwnerPct = pctLabel(assetOwnerShare);
+    const treasuryPct = pctLabel(treasuryShare);
+    const specialistPct = pctLabel(specialistShare);
 
     const hasSpecialist = !!specialistId;
 
@@ -237,20 +245,20 @@ export async function POST(
         anchorPending: !solanaAnchor.success,
       },
       distribution: {
-        verifiedAssetValue: { share: assetOwnerShare, wallet: submission.walletAddress, percent: '70%', label: 'Asset Sovereign' },
-        platformProcessor: { share: treasuryShare, wallet: TREASURY_WALLET, percent: '20%', label: 'Platform Processor' },
+        verifiedAssetValue: { share: assetOwnerShare, wallet: submission.walletAddress, percent: assetOwnerPct, label: 'Asset Sovereign' },
+        platformProcessor: { share: treasuryShare, wallet: TREASURY_WALLET, percent: treasuryPct, label: 'Platform Processor' },
         publicResilience: hasSpecialist
           ? {
               share: specialistShare,
               id: specialistId,
               wallet: specialistWallet || 'PENDING',
-              percent: '10%',
+              percent: specialistPct,
               label: 'Public Resilience',
             }
           : {
               share: specialistShare,
               routedTo: PUBLIC_RESILIENCE_POOL,
-              percent: '10%',
+              percent: specialistPct,
               label: 'Public Resilience',
               note: 'Auto-routed to Public Resilience Pool',
             },

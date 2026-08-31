@@ -17,6 +17,14 @@ import crypto from 'crypto';
 function buildCertificateHtml(submission: Record<string, unknown>, settlement: Record<string, unknown> | null): string {
   const sub = submission as Record<string, unknown>;
   const stl = settlement as Record<string, unknown> | null;
+  // Derive the actual basis-point split from the STORED settlement shares — never
+  // hardcode a fixed ratio. Falls back to '—' when the total is unavailable.
+  const stlTotal = stl ? Number(stl.totalValueUsd) || 0 : 0;
+  const pctOf = (share: unknown): string =>
+    stlTotal > 0 ? `${((Number(share) / stlTotal) * 100).toFixed(0)}%` : '—';
+  const ownerPct = stl ? pctOf(stl.assetOwnerShare) : '—';
+  const treasuryPct = stl ? pctOf(stl.treasuryShare) : '—';
+  const specialistPct = stl ? pctOf(stl.specialistShare) : '—';
   const now = new Date().toISOString();
   const certHash = crypto.createHash('sha256').update(`${sub.submissionId}-${now}`).digest('hex').slice(0, 16).toUpperCase();
 
@@ -241,20 +249,20 @@ function buildCertificateHtml(submission: Record<string, unknown>, settlement: R
 
     ${stl ? `
     <div class="section">
-      <div class="section-title">70/20/10 SMART SETTLEMENT</div>
+      <div class="section-title">DYNAMIC BPS SMART SETTLEMENT</div>
       <div class="settlement-bar">
         <div class="segment owner">
-          <div class="pct" style="color:#22c55e">70%</div>
+          <div class="pct" style="color:#22c55e">${ownerPct}</div>
           <div class="amt">$${Number(stl.assetOwnerShare).toFixed(2)}</div>
           <div class="lbl">Asset Sovereign</div>
         </div>
         <div class="segment treasury">
-          <div class="pct" style="color:#3b82f6">20%</div>
+          <div class="pct" style="color:#3b82f6">${treasuryPct}</div>
           <div class="amt">$${Number(stl.treasuryShare).toFixed(2)}</div>
           <div class="lbl">Platform Processor</div>
         </div>
         <div class="segment specialist">
-          <div class="pct" style="color:#a855f7">10%</div>
+          <div class="pct" style="color:#a855f7">${specialistPct}</div>
           <div class="amt">$${Number(stl.specialistShare).toFixed(2)}</div>
           <div class="lbl">Public Resilience</div>
         </div>

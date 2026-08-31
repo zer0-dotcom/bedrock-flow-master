@@ -134,20 +134,47 @@ export default function DashboardContent() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <h4 className="font-medium text-emerald-600 dark:text-emerald-400">Core Capabilities</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>• Certified LCA Carbon Modeling (A1–A3 Lifecycle)</li>
-                <li>• Automated Mix Optimization with GHG Targeting</li>
-                <li>• On-Chain Verification Ledger (Solana-Anchored)</li>
-                <li>• Real-Time Operational Telemetry &amp; Reporting</li>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  • <span className="text-foreground font-medium">Multi-Material Scope 3 Forensic Ledger:</span> Certified
+                  LCA modeling across 9 industrial categories (Construction, Metals, Plastics, Biochar, Paper, Glass,
+                  Electronics, Textiles, Rubber) with 40+ active emission factors grounded in ASHRAE 90.1, ICE v4.1, and
+                  Ecoinvent v3.10.1 coefficients with live eGRID grid factors. Zero synthetic carbon data.
+                </li>
+                <li>
+                  • <span className="text-foreground font-medium">Two-Tier Telemetry Ingestion:</span> Satellite remote
+                  thermal/ghost-plume discovery (~60% confidence) paired with on-site specialist physical hardware audit
+                  (~95%+ precision attestation).
+                </li>
+                <li>
+                  • <span className="text-foreground font-medium">Dynamic BPS Settlement Engine:</span> Parameterized
+                  on-chain value routing via Solana Token-2022 anchors. Σ = 10,000 BPS is the only immutable floor.
+                </li>
+                <li>
+                  • <span className="text-foreground font-medium">3-Year Retroactive Lookback Window:</span> Baseline
+                  reconciliation and monetization for up to 36 months of historical industrial waste manifests.
+                </li>
               </ul>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium text-emerald-600 dark:text-emerald-400">Operational KPIs</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>• Industry Benchmark: 60 kg CO₂/ton</li>
-                <li>• Green Bid Target: &lt;45 kg CO₂/ton</li>
-                <li>• Max RAP (Surface): 25%</li>
-                <li>• Max RAP (Base): 40%</li>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  • <span className="text-foreground font-medium">Material Track Coverage:</span> 9 Industrial &amp;
+                  Commodity Classes (40+ Active Emission Factors)
+                </li>
+                <li>
+                  • <span className="text-foreground font-medium">Retroactive Evaluation Horizon:</span> Up to 36 Months
+                  Baseline Capture
+                </li>
+                <li>
+                  • <span className="text-foreground font-medium">Verification Precision Ladder:</span> 60% Remote Orbit
+                  → 95%+ On-Site Specialist Attestation
+                </li>
+                <li>
+                  • <span className="text-foreground font-medium">On-Chain Settlement Standard:</span> 100% Deterministic
+                  Dynamic BPS Distribution (Σ = 10,000)
+                </li>
               </ul>
             </div>
           </div>

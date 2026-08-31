@@ -3,7 +3,7 @@
  *
  * Captures every:
  *   • Submission status change
- *   • Settlement execution (70/20/10 split)
+ *   • Settlement execution (Dynamic BPS split)
  *   • Blockchain anchor event
  *   • Role change
  *   • Sovereign verdict override

@@ -114,7 +114,7 @@ export async function PATCH(
         approvedBy: auth.userId,
         nextStep: approved
           ? updated.status === 'FORENSIC_VERIFIED'
-            ? `POST /api/submissions/${id}/settle to execute 70/20/10 settlement with Solana anchor.`
+            ? `POST /api/submissions/${id}/settle to execute Dynamic BPS settlement with Solana anchor.`
             : 'Awaiting forensic verification (HUM event match or forceVerify).'
           : 'Founder approval revoked. Settlement is blocked.',
       },

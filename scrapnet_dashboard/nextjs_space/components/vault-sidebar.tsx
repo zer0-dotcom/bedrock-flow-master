@@ -31,7 +31,7 @@ const navItems = [
     name: 'Community Credits', 
     href: '/vault/community', 
     icon: Users,
-    description: '10% Public Resilience'
+    description: 'Public Resilience'
   },
   { 
     name: 'Settings', 

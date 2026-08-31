@@ -49,7 +49,8 @@ import {
   MEMO_PROGRAM_ID,
   EXPECTED_PUBLIC_KEY,
 } from '@/lib/solana-notary';
-import { UNIVERSAL_SPLIT, SETTLEMENT_LABELS } from '@/lib/universal-law';
+import { UNIVERSAL_SPLIT, SETTLEMENT_LABELS, assertBpsIntegrity } from '@/lib/universal-law';
+import { getBpsConfig } from '@/lib/bps-config';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -224,7 +225,7 @@ function getSolanaConnection(): Connection {
 /**
  * mintSovereignAssetToken — Core structural function.
  *
- * Queries the Settlement record from PostgreSQL, validates the 70/20/10 split,
+ * Queries the Settlement record from PostgreSQL, validates the Dynamic BPS split (Σ = 10,000 floor),
  * initializes a Token-2022 mint with embedded metadata extension, mints tokens
  * to the Aethexer custodial escrow wallet, and anchors a backtrace memo.
  *
@@ -276,7 +277,7 @@ export async function mintSovereignAssetToken(
     if (!settlement.executed) {
       throw new Error(
         `[PROTOCOL ERROR] Settlement ${settlementId} has not been executed. ` +
-        'Only executed settlements with a confirmed 70/20/10 split can be minted as sovereign tokens.'
+        'Only executed settlements with a confirmed Dynamic BPS split (Σ = 10,000) can be minted as sovereign tokens.'
       );
     }
 
@@ -329,24 +330,32 @@ export async function mintSovereignAssetToken(
     );
   }
 
-  // ─── Step 2: Validate 70/20/10 Split Compliance ───
-  const expectedFounder = totalValue * UNIVERSAL_SPLIT.FOUNDER_YIELD;
-  const expectedPlatform = totalValue * UNIVERSAL_SPLIT.STEWARDSHIP;
-  const expectedResilience = totalValue * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
+  // ─── Step 2: Validate Dynamic BPS Integrity (Σ = 10,000 floor) ───
+  // The mint gate no longer hardcodes a fixed leg ratio. Instead it enforces the
+  // sole immutable canon: the operator-configured basis points MUST sum to
+  // exactly 10,000 (earnerBps + nodeBps + depinBps + customLegs). This is
+  // validated via the shared assertBpsIntegrity() logic so settlement and mint
+  // stay in lockstep — any operator-configured split that clears settlement
+  // also clears the mint gate.
+  const bpsConfig = getBpsConfig();
+  const totalBps = assertBpsIntegrity(bpsConfig); // throws unless Σ === 10,000
 
-  // Allow 0.01 USD tolerance for floating point (scaled for large values)
+  // ─── Zero Greed guard: the settlement must distribute the FULL value with no
+  // skim. Dust remainder routes to the EARNER leg, so the sum of all legs
+  // reconciles to totalValue within floating-point tolerance regardless of the
+  // configured ratio. A shortfall/overage means value was skimmed or leaked.
   const tolerance = Math.max(0.01, totalValue * 0.000001);
-  const splitCompliant =
-    Math.abs(founderYield - expectedFounder) <= tolerance &&
-    Math.abs(platformProcessor - expectedPlatform) <= tolerance &&
-    Math.abs(publicResilience - expectedResilience) <= tolerance;
+  const distributedTotal = founderYield + platformProcessor + publicResilience;
+  const zeroGreedCompliant = Math.abs(distributedTotal - totalValue) <= tolerance;
 
-  if (!splitCompliant) {
+  if (!zeroGreedCompliant) {
     throw new Error(
-      `[ZERO GREED VIOLATION] Settlement ${settlementId} split does not match 70/20/10. ` +
-      `Expected: ${expectedFounder.toFixed(2)}/${expectedPlatform.toFixed(2)}/${expectedResilience.toFixed(2)}. ` +
-      `Actual: ${founderYield.toFixed(2)}/${platformProcessor.toFixed(2)}/${publicResilience.toFixed(2)}. ` +
-      'Token minting is HALTED until split compliance is verified.'
+      `[ZERO GREED VIOLATION] Settlement ${settlementId} does not fully distribute value against the 10,000 BPS floor. ` +
+      `Configured legs sum to ${totalBps} BPS. ` +
+      `Expected distributed total: ${totalValue.toFixed(2)}. ` +
+      `Actual distributed total: ${distributedTotal.toFixed(2)} ` +
+      `(${founderYield.toFixed(2)}/${platformProcessor.toFixed(2)}/${publicResilience.toFixed(2)}). ` +
+      'Token minting is HALTED until the full value is distributed with dust routed to the EARNER leg.'
     );
   }
 
@@ -663,7 +672,7 @@ export async function mintSovereignAssetToken(
         platformProcessor20: platformProcessor,
         publicResilience10: publicResilience,
         totalValueUsd: totalValue,
-        compliant: splitCompliant,
+        compliant: zeroGreedCompliant,
       },
     };
   } catch (err: unknown) {
@@ -689,7 +698,7 @@ export async function mintSovereignAssetToken(
         platformProcessor20: platformProcessor,
         publicResilience10: publicResilience,
         totalValueUsd: totalValue,
-        compliant: splitCompliant,
+        compliant: zeroGreedCompliant,
       },
       error: message,
     };
@@ -885,5 +894,5 @@ export const SOVEREIGN_MINT_ENGINE = {
   custodialWallet: AETHEXER_CUSTODIAL_WALLET.toBase58(),
   signerIdentity: 'Aethexer Notary Node',
   nodeId: 'Sentinel Node-01',
-  splitPolicy: '70/20/10 Zero Greed',
+  splitPolicy: 'Dynamic BPS Zero Greed (Σ = 10,000)',
 };

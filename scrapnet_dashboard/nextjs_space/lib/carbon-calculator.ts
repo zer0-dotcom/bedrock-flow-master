@@ -349,7 +349,7 @@ export interface AggregateImpact {
  * ExtendedImpactEngine Class
  * 
  * Extended calculation engine for recycling materials with EPA WARM factors.
- * Implements the Universal Law (70/20/10) distribution model.
+ * Implements the Universal Law (Dynamic BPS) distribution model.
  */
 export class ExtendedImpactEngine {
   private emissionFactors: typeof EMISSION_FACTORS;

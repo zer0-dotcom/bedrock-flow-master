@@ -34,7 +34,7 @@ import crypto from 'crypto';
  *   2. Validate telemetry payload
  *   3. Run Sentinel verification (synthetic scoring from telemetry quality)
  *   4. Persist TelemetryReading
- *   5. If AUTO_APPROVED → trigger 70/20/10 settlement
+ *   5. If AUTO_APPROVED → trigger Dynamic BPS settlement
  *   6. Return reading + verdict + settlement (if triggered)
  */
 
@@ -275,7 +275,7 @@ function synthesizeSentinelInputs(data: TelemetryPayload) {
 
 /**
  * Auto-settle telemetry on AUTO_APPROVED verdict.
- * Calculates 70/20/10 split based on carbon cost.
+ * Calculates the Dynamic BPS split based on carbon cost.
  */
 function calculateTelemetrySettlement(data: TelemetryPayload) {
   // Value derived from carbon cost: $50/tonne CO2 shadow price
@@ -293,9 +293,9 @@ function calculateTelemetrySettlement(data: TelemetryPayload) {
     settlementId,
     totalValueUsd: Math.round(totalValueUsd * 100) / 100,
     split: {
-      assetSovereign: founderYieldUsd,           // 70% — Asset Sovereign (Verified Asset Holder)
-      platformProcessor: stewardshipUsd,        // 20% — Platform Processor  
-      publicResilience: publicResilienceUsd,     // 10% — Public Resilience
+      assetSovereign: founderYieldUsd,           // Asset Sovereign leg (Verified Asset Holder)
+      platformProcessor: stewardshipUsd,        // Platform Processor leg
+      publicResilience: publicResilienceUsd,     // Public Resilience leg
     },
     carbonTonnes: Math.round(carbonTonnes * 10000) / 10000,
     shadowPricePerTonne: carbonShadowPrice,

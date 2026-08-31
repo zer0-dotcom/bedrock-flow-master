@@ -154,7 +154,7 @@ export default function LedgerContent() {
   const [hoveredPulse, setHoveredPulse] = useState<PulseEntry | null>(null);
   const [settlementVelocity, setSettlementVelocity] = useState(2.5);
   const [settlementLatency, setSettlementLatency] = useState(150);
-  // Live operator-configured BPS table (no hardcoded 70/20/10 in the UI).
+  // Live operator-configured BPS table (no hardcoded ratio in the UI).
   const [bpsTable, setBpsTable] = useState<BpsTableView | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -554,11 +554,11 @@ export default function LedgerContent() {
                   <div className="text-emerald-400 font-semibold">ACTIVE</div>
                 </div>
                 <div className="bg-[hsl(225,25%,10%)] rounded-lg p-4">
-                  <div className="text-gray-500">70% Asset Sovereign</div>
+                  <div className="text-gray-500">{bpsTable ? `${bpsTable.earnerPct}% ` : ''}Asset Sovereign</div>
                   <div className="text-white font-semibold">Flowing</div>
                 </div>
                 <div className="bg-[hsl(225,25%,10%)] rounded-lg p-4">
-                  <div className="text-gray-500">10% Public Resilience</div>
+                  <div className="text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Public Resilience</div>
                   <div className="text-cyan-400 font-semibold">Distributed</div>
                 </div>
               </div>
@@ -600,7 +600,7 @@ export default function LedgerContent() {
                     <div className="text-emerald-400">${hoveredPulse.totalValueUsd.toLocaleString()}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500">10% Public Resilience</div>
+                    <div className="text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Public Resilience</div>
                     <div className="text-cyan-400">${hoveredPulse.publicResilienceUsd?.toLocaleString() || '—'}</div>
                   </div>
                   <div>
@@ -685,8 +685,8 @@ export default function LedgerContent() {
               <h3 className="text-lg font-semibold text-white">Zero Greed Policy</h3>
             </div>
             <p className="text-gray-400 text-sm">
-              If any transaction attempts to bypass the 10% Public Resilience (threshold: 9.9%), it is immediately
-              flagged as &ldquo;HIGH-FRICTION&rdquo; and settlement is blocked until the ratio is restored.
+              If any transaction attempts to bypass the configured Public Resilience allocation{bpsTable ? ` (${bpsTable.depinPct}%)` : ''} it is immediately
+              flagged as &ldquo;HIGH-FRICTION&rdquo; and settlement is blocked until the Σ = 10,000 BPS floor is restored.
             </p>
           </div>
         </div>

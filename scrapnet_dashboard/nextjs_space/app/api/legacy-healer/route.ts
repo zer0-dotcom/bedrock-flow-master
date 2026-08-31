@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       version: '2.5',
       maxLookbackYears: 9.0,
       resonanceBonusRate: '5% compounding',
-      universalLaw: '70/20/10 Split',
+      universalLaw: 'Dynamic BPS Split',
       endpoints: {
         GET: {
           '?action=actions': 'List available sovereign actions',

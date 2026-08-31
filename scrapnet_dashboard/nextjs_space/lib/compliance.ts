@@ -203,7 +203,7 @@ export interface JurisdictionSplitRules {
 }
 
 export function getJurisdictionSplitRules(jurisdiction: Jurisdiction): JurisdictionSplitRules {
-  // Base 70/20/10 split
+  // Base Dynamic BPS split
   const baseSplit: JurisdictionSplitRules = {
     bankShare: 70,
     platformShare: 20,

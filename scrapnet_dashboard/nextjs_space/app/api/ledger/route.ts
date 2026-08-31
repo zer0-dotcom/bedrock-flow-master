@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
  * Lead Actuary & Liquidity Architect
  * 
  * GET actions:
- * - split: Get Universal 70/20/10 split percentages
+ * - split: Get the live operator-configured Dynamic BPS split percentages
  * - entries: List universal ledger entries
  * - stats: Aggregate statistics
  * - impact-report: Generate/fetch impact reports
@@ -239,7 +239,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           highFrictionEntries: entries,
           count: entries.length,
-          policy: 'Zero Greed Policy: 10% Public Resilience must be maintained',
+          policy: 'Zero Greed Policy: the configured Public Resilience allocation must be maintained (Σ = 10,000 BPS)',
         });
       }
 
@@ -494,7 +494,7 @@ export async function POST(request: NextRequest) {
         if (result.complianceStatus === 'HIGH_FRICTION') {
           return NextResponse.json({
             error: 'Zero Greed Policy Violation',
-            message: 'Transaction bypasses 10% Public Resilience. Settlement blocked until ratio is restored.',
+            message: 'Transaction bypasses the configured Public Resilience allocation. Settlement blocked until the Σ = 10,000 BPS distribution is restored.',
             result,
           }, { status: 403 });
         }
@@ -563,7 +563,7 @@ export async function POST(request: NextRequest) {
         if (result.complianceStatus === 'HIGH_FRICTION') {
           return NextResponse.json({
             error: 'Zero Greed Policy Violation',
-            message: 'Transaction bypasses 10% Public Resilience. Settlement blocked.',
+            message: 'Transaction bypasses the configured Public Resilience allocation. Settlement blocked.',
             result,
           }, { status: 403 });
         }
@@ -817,7 +817,7 @@ export async function POST(request: NextRequest) {
         if (complianceCheck === 'HIGH_FRICTION') {
           return NextResponse.json({
             error: 'Adjusted split still violates Zero Greed Policy',
-            required: '10% minimum for Public Resilience',
+            required: 'Configured Public Resilience allocation required (Σ = 10,000 BPS)',
           }, { status: 400 });
         }
         

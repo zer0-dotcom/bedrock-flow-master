@@ -566,7 +566,7 @@ export default function ImpactEngineContent() {
             </div>
 
             <p className="text-gray-400 text-sm mb-4">
-              Active node telemetry feeds push every 60 seconds. Sentinel verification auto-triggers 70/20/10 settlement on <code className="text-emerald-400">AUTO_APPROVED</code> verdict.
+              Active node telemetry feeds push every 60 seconds. Sentinel verification auto-triggers Dynamic BPS settlement on <code className="text-emerald-400">AUTO_APPROVED</code> verdict.
             </p>
 
             {telemetryError && (

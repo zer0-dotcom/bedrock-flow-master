@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SovereignPentagon from './sovereign-pentagon';
+import { useBpsTable } from '@/lib/use-bps-table';
 
 interface SovereignAction {
   key: string;
@@ -110,6 +111,7 @@ const MONTHS = [
 ];
 
 export default function LegacyHealerContent() {
+  const bpsTable = useBpsTable();
   const [zipCode, setZipCode] = useState('');
   const [events, setEvents] = useState<SovereignEvent[]>([]);
   const [availableActions, setAvailableActions] = useState<SovereignAction[]>([]);
@@ -233,7 +235,7 @@ export default function LegacyHealerContent() {
           Reclaim your historical carbon contributions through the Historical Restoration Protocol.
         </p>
         <p className="text-gray-500 text-sm mt-2">
-          9.0 Year Historical Lookback • 5% Compounding Efficiency Bonus • 70/20/10 Universal Law
+          9.0 Year Historical Lookback • 5% Compounding Efficiency Bonus • Dynamic BPS Universal Law
         </p>
       </div>
 
@@ -482,22 +484,22 @@ export default function LegacyHealerContent() {
                   {(result.totalDelta + result.totalResonanceBonus).toFixed(2)} tonnes CO₂ reclaimed
                 </div>
 
-                {/* 70/20/10 Split */}
+                {/* Dynamic BPS Split */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-emerald-900/20 rounded-lg p-3 border border-emerald-500/20">
-                    <div className="text-xs text-gray-500">70% Asset Sovereign</div>
+                    <div className="text-xs text-gray-500">{bpsTable ? `${bpsTable.earnerPct}% ` : ''}Asset Sovereign</div>
                     <div className="text-lg font-bold text-emerald-400">
                       ${result.founderYield70.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                   <div className="bg-amber-900/20 rounded-lg p-3 border border-amber-500/20">
-                    <div className="text-xs text-gray-500">20% Platform Processor</div>
+                    <div className="text-xs text-gray-500">{bpsTable ? `${bpsTable.nodePct}% ` : ''}Platform Processor</div>
                     <div className="text-lg font-bold text-amber-400">
                       ${result.stewardship20.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>
                   </div>
                   <div className="bg-cyan-900/20 rounded-lg p-3 border border-cyan-500/20">
-                    <div className="text-xs text-gray-500">10% Public Resilience</div>
+                    <div className="text-xs text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Public Resilience</div>
                     <div className="text-lg font-bold text-cyan-400">
                       ${result.publicOverflow10.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>

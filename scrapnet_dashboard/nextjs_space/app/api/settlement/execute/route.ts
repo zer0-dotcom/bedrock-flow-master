@@ -11,7 +11,7 @@ import { getBpsConfig } from '@/lib/bps-config';
  * DYNAMIC BPS SETTLEMENT EXECUTOR API — BACKEND-SILENT
  *
  * Executes a dust-free settlement split using the live operator-configured BPS
- * table (see lib/bps-config.ts). The historic hardcoded 70/20/10 split is
+ * table (see lib/bps-config.ts). The historic hardcoded fixed split is
  * DEPRECATED — nothing here hardcodes percentages, and `netYieldUi` is COMPUTED
  * from the live EARNER leg against the gross settlement (never a fixed 0.7).
  *

@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       0
     );
 
-    // Total ledger equity (70% founder yield)
+    // Total ledger equity (Asset Sovereign / founder-yield leg)
     const totalLedgerEquity = carbonEntries.reduce(
       (sum, entry) => sum + (entry.founderYield70 || 0),
       0
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       0
     );
 
-    // Public overflow (10%)
+    // Public overflow (Public Resilience leg)
     const totalPublicOverflow = carbonEntries.reduce(
       (sum, entry) => sum + (entry.publicOverflow10 || 0),
       0

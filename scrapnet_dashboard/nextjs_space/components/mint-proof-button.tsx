@@ -83,7 +83,7 @@ export default function MintProofButton({
       timestamp: new Date().toISOString(),
       userId: auditData.userId.substring(0, 8), // Truncated for privacy
       geniusActCompliant: true,
-      universalLaw: '70/20/10',
+      universalLaw: 'Dynamic BPS (Σ = 10,000)',
       ...(auditData.metadata || {}),
     };
     return JSON.stringify(proofData);

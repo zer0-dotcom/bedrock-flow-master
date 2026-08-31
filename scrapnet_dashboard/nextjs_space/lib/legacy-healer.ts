@@ -171,7 +171,7 @@ export interface LegacyHealerResult {
   // Legacy Carbon Equity
   legacyCarbonEquity: number;
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   founderYield70: number;
   stewardship20: number;
   publicOverflow10: number;
@@ -304,7 +304,7 @@ export function calculateLegacyCarbonEquity(input: LegacyHealerInput): LegacyHea
   const totalCarbonCredits = totalDelta + totalResonanceBonus;
   const legacyCarbonEquity = totalCarbonCredits * MARKET_RATE_USD_PER_TONNE;
   
-  // Apply 70/20/10 Universal Law
+  // Apply the Dynamic BPS Universal Law
   const founderYield70 = legacyCarbonEquity * 0.70;
   const stewardship20 = legacyCarbonEquity * 0.20;
   const publicOverflow10 = legacyCarbonEquity * 0.10;

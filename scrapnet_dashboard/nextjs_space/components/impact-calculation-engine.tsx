@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { ImpactEngine, EMISSION_FACTORS, CONSTRUCTION_EMISSION_FACTORS } from '@/lib/carbon-calculator';
+import { useBpsTable } from '@/lib/use-bps-table';
 import {
   Calculator, Scale, AlertCircle, Leaf, TrendingUp, ArrowUpRight
 } from 'lucide-react';
@@ -12,6 +13,7 @@ export default function ImpactCalculationEngine() {
   const [weightKg, setWeightKg] = useState<number>(100);
   const [impactResult, setImpactResult] = useState<ReturnType<typeof ImpactEngine.calculateWithSplit> | null>(null);
   const [calcError, setCalcError] = useState<string>('');
+  const bpsTable = useBpsTable();
 
   const materialCategories = useMemo(() => {
     const categories: Record<string, Array<{ key: string; label: string; factor: number }>> = {};
@@ -120,11 +122,11 @@ export default function ImpactCalculationEngine() {
             </div>
             <div className="text-center p-3 rounded-lg bg-[#1a1a1a]">
               <p className="text-2xl font-bold text-violet-400">${impactResult.founderYield70.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Asset Sovereign (70%)</p>
+              <p className="text-xs text-gray-500">Asset Sovereign{bpsTable ? ` (${bpsTable.earnerPct}%)` : ''}</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-[#1a1a1a]">
               <p className="text-2xl font-bold text-amber-400">${impactResult.publicOverflow10.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Public Resilience (10%)</p>
+              <p className="text-xs text-gray-500">Public Resilience{bpsTable ? ` (${bpsTable.depinPct}%)` : ''}</p>
             </div>
           </div>
 

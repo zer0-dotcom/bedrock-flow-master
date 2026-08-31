@@ -1946,7 +1946,7 @@ export function verifyREFSZeroGreed(result: REFSResult): { compliant: boolean; v
   
   // Check standard 70/20/10 compliance
   if (result.complianceStatus !== 'COMPLIANT') {
-    violations.push('Universal 70/20/10 split not maintained');
+    violations.push('Universal Dynamic BPS split not maintained (Σ must equal 10,000 BPS)');
   }
   
   // Special RENT/LEASE check: Tenant must receive 10%
@@ -1987,7 +1987,7 @@ export function verifyGeniusActCompliance(
   
   // Check 2: Universal Split verification (70/20/10)
   const splitValid = verifyZeroGreedPolicy(split) === 'COMPLIANT';
-  if (!splitValid) violations.push('Universal 70/20/10 split not maintained');
+  if (!splitValid) violations.push('Universal Dynamic BPS split not maintained (Σ must equal 10,000 BPS)');
   
   // Check 3: Public Resilience routing
   const publicResilienceRouted = split.publicResilience >= split.total * 0.099; // 9.9% minimum
