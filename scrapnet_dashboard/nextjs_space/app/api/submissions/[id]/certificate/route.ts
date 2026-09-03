@@ -259,7 +259,7 @@ function buildCertificateHtml(submission: Record<string, unknown>, settlement: R
         <div class="segment treasury">
           <div class="pct" style="color:#3b82f6">${treasuryPct}</div>
           <div class="amt">$${Number(stl.treasuryShare).toFixed(2)}</div>
-          <div class="lbl">Platform Processor</div>
+          <div class="lbl">Verification Node</div>
         </div>
         <div class="segment specialist">
           <div class="pct" style="color:#a855f7">${specialistPct}</div>

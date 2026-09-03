@@ -493,7 +493,7 @@ export default function LegacyHealerContent() {
                     </div>
                   </div>
                   <div className="bg-amber-900/20 rounded-lg p-3 border border-amber-500/20">
-                    <div className="text-xs text-gray-500">{bpsTable ? `${bpsTable.nodePct}% ` : ''}Platform Processor</div>
+                    <div className="text-xs text-gray-500">{bpsTable ? `${bpsTable.nodePct}% ` : ''}Verification Node</div>
                     <div className="text-lg font-bold text-amber-400">
                       ${result.stewardship20.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </div>

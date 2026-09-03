@@ -12,7 +12,7 @@ import { logSettlementExecution, logBlockchainAnchor } from '@/lib/audit-logger'
  * On final forensic verification, distributes value across the live
  * operator-configured Dynamic BPS legs (Σ = 10,000 BPS):
  *   → Asset Sovereign (Verified Asset Holder)
- *   → Platform Processor
+ *   → Verification Node
  *   → Public Resilience (singular block — dynamic routing by asset_class at metadata level)
  *
  * Public Resilience Rule: If no specialist ID is present,
@@ -246,7 +246,7 @@ export async function POST(
       },
       distribution: {
         verifiedAssetValue: { share: assetOwnerShare, wallet: submission.walletAddress, percent: assetOwnerPct, label: 'Asset Sovereign' },
-        platformProcessor: { share: treasuryShare, wallet: TREASURY_WALLET, percent: treasuryPct, label: 'Platform Processor' },
+        platformProcessor: { share: treasuryShare, wallet: TREASURY_WALLET, percent: treasuryPct, label: 'Verification Node' },
         publicResilience: hasSpecialist
           ? {
               share: specialistShare,

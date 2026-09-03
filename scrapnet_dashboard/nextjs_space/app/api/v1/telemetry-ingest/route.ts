@@ -294,7 +294,7 @@ function calculateTelemetrySettlement(data: TelemetryPayload) {
     totalValueUsd: Math.round(totalValueUsd * 100) / 100,
     split: {
       assetSovereign: founderYieldUsd,           // Asset Sovereign leg (Verified Asset Holder)
-      platformProcessor: stewardshipUsd,        // Platform Processor leg
+      platformProcessor: stewardshipUsd,        // Verification Node leg
       publicResilience: publicResilienceUsd,     // Public Resilience leg
     },
     carbonTonnes: Math.round(carbonTonnes * 10000) / 10000,

@@ -1,7 +1,7 @@
 /**
  * BEDROCK ESG — DYNAMIC BPS CONFIGURATION (single source of truth)
  *
- * The historic settlement split was a hardcoded 70/20/10 (EARNER 7000 /
+ * The historic settlement split was a hardcoded Dynamic BPS (EARNER 7000 /
  * NODE 2000 / DEPIN 1000 basis points). That is now DEPRECATED: every split
  * value is operator-configured at runtime via environment variables, and the
  * ONLY immutable floor is that all legs must sum to exactly 10,000 BPS.
@@ -116,7 +116,7 @@ export interface BpsTable {
   nodePct: number;
   depinPct: number;
   legs: BpsTableLeg[];
-  /** Convenience label, e.g. "70/20/10" derived dynamically. */
+  /** Convenience label, e.g. "Dynamic BPS" derived dynamically. */
   label: string;
 }
 

@@ -2,12 +2,12 @@
  * BEDROCK ESG GLOBAL LEDGER
  * Lead Actuary & Liquidity Architect
  * 
- * Core Logic: The 70/20/10 Universal Law
+ * Core Logic: The Dynamic BPS Universal Law
  * Transform "Invisible Debt" into "Liquid Overflow"
  * 
  * Every unit of value ingested must be split at the atomic level:
  * - 70% [Asset Sovereign]: Direct liquidity for the Verified Asset Holder
- * - 20% [Platform Processor]: Maintenance of Bedrock ESG/Unicon/Freality nodes
+ * - 20% [Verification Node]: Maintenance of Bedrock ESG/Unicon/Freality nodes
  * - 10% [Public Resilience]: Non-custodial routing to Household Resilience Grants
  */
 
@@ -26,14 +26,14 @@ import {
 
 export const UNIVERSAL_SPLIT = {
   FOUNDER_YIELD: 0.70,      // 70% Asset Sovereign (Verified Asset Holder)
-  STEWARDSHIP: 0.20,        // 20% Platform Processor
+  STEWARDSHIP: 0.20,        // 20% Verification Node
   PUBLIC_RESILIENCE: 0.10,  // 10% Public Resilience
 } as const;
 
-// Display labels for the 70/20/10 split (BT-C9C4C5 v2.2)
+// Display labels for the Dynamic BPS split (BT-C9C4C5 v2.2)
 export const SETTLEMENT_LABELS = {
   SEVENTY: 'Asset Sovereign',
-  TWENTY: 'Platform Processor',
+  TWENTY: 'Verification Node',
   TEN: 'Public Resilience',
 } as const;
 
@@ -83,7 +83,7 @@ export interface DeadMassResult {
   carbonAvoidedKg: number;
   carbonAvoidedTonnes: number;
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   split: {
     founderYieldUsd: number;
     stewardshipUsd: number;
@@ -134,7 +134,7 @@ export function calculateDeadMass(input: DeadMassInput): DeadMassResult {
   const carbonAvoidedKg = deadMassKg * carbonFactor;
   const carbonAvoidedTonnes = carbonAvoidedKg / 1000;
   
-  // Apply 70/20/10 split to value
+  // Apply Dynamic BPS split to value
   const founderYieldUsd = input.totalValueUsd * UNIVERSAL_SPLIT.FOUNDER_YIELD;
   const stewardshipUsd = input.totalValueUsd * UNIVERSAL_SPLIT.STEWARDSHIP;
   const publicResilienceUsd = input.totalValueUsd * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -209,7 +209,7 @@ export interface ResonanceResult {
     carbonAvoidedTonnes: number;      // Total CO2e avoided
   };
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   split: {
     founderYieldUsd: number;
     stewardshipUsd: number;
@@ -269,7 +269,7 @@ export function calculateResonance(input: ResonanceInput): ResonanceResult {
   const carbonFromPaper = (paperKg * MATERIAL_CARBON_FACTORS.PAPER_KG_CO2) / 1000;
   const carbonAvoidedTonnes = carbonFromFlights + carbonFromPlastic + carbonFromPaper;
   
-  // Apply 70/20/10 split
+  // Apply Dynamic BPS split
   const founderYieldUsd = input.revenueUsd * UNIVERSAL_SPLIT.FOUNDER_YIELD;
   const stewardshipUsd = input.revenueUsd * UNIVERSAL_SPLIT.STEWARDSHIP;
   const publicResilienceUsd = input.revenueUsd * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -674,7 +674,7 @@ export interface LegacyAuditResult {
   marketRateMultiplier: number;
   legacyYieldUsd: number;
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   split: {
     founderYieldUsd: number;
     stewardshipUsd: number;
@@ -753,7 +753,7 @@ export function calculateLegacyAudit(input: LegacyAuditInput): LegacyAuditResult
   const marketRateMultiplier = MARKET_RATE_2026[input.dataSource];
   const legacyYieldUsd = totalFrictionUsd * marketRateMultiplier;
   
-  // Apply 70/20/10 split
+  // Apply Dynamic BPS split
   const founderYieldUsd = legacyYieldUsd * UNIVERSAL_SPLIT.FOUNDER_YIELD;
   const stewardshipUsd = legacyYieldUsd * UNIVERSAL_SPLIT.STEWARDSHIP;
   const publicResilienceUsd = legacyYieldUsd * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -1097,7 +1097,7 @@ export function processParametricInsurance(input: ParametricInsuranceInput): Par
       const approvedAmountUsd = Math.min(input.claimAmountUsd, input.coverageAmountUsd);
       const afterDeductibleUsd = Math.max(0, approvedAmountUsd - deductibleUsd);
       
-      // Apply 70/20/10 split to settlement
+      // Apply Dynamic BPS split to settlement
       const founderYieldUsd = afterDeductibleUsd * UNIVERSAL_SPLIT.FOUNDER_YIELD;
       const stewardshipUsd = afterDeductibleUsd * UNIVERSAL_SPLIT.STEWARDSHIP;
       const publicResilienceUsd = afterDeductibleUsd * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -1253,7 +1253,7 @@ function formatCurrency(amount: number): string {
  * 
  * Transaction Types:
  * - SALE/BUY: Ownership Flip - Title Friction Avoidance
- * - RENT/LEASE: Tenant as Co-Steward - 70/20/10 with Tenant Resilience Wallet
+ * - RENT/LEASE: Tenant as Co-Steward - Dynamic BPS with Tenant Resilience Wallet
  * - AIRBNB/SHORT_TERM: Hospitality Flow - Local Economic Velocity
  */
 
@@ -1316,7 +1316,7 @@ export interface SaleBuyResult {
     rwaTokenEligible: boolean;
   };
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   split: {
     founderYieldUsd: number; // 70% to seller/buyer
     stewardshipUsd: number; // 20% to Debt-Erasure Protocol
@@ -1388,10 +1388,10 @@ export function calculateSaleBuySettlement(input: SaleBuyInput): SaleBuyResult {
   const debtErasureEligible = chargePercent >= 20; // At least 20% charge for debt erasure
   const rwaTokenEligible = input.currentLtvPercent <= 80 && input.isDigitalClosing;
   
-  // Value basis for 70/20/10 split (use friction savings + portion of closing)
+  // Value basis for Dynamic BPS split (use friction savings + portion of closing)
   const settlementValue = titleFrictionAvoided + (input.closingCostsUsd * 0.05);
   
-  // Apply 70/20/10 split
+  // Apply Dynamic BPS split
   const founderYieldUsd = settlementValue * UNIVERSAL_SPLIT.FOUNDER_YIELD;
   const stewardshipUsd = settlementValue * UNIVERSAL_SPLIT.STEWARDSHIP;
   const publicResilienceUsd = settlementValue * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -1552,7 +1552,7 @@ export function calculateRentLeaseSettlement(input: RentLeaseInput): RentLeaseRe
   // Monthly settlement value
   const monthlyValue = input.monthlyRentUsd;
   
-  // Apply 70/20/10 split
+  // Apply Dynamic BPS split
   const landlordYieldUsd = monthlyValue * UNIVERSAL_SPLIT.FOUNDER_YIELD;
   const propertyHardeningUsd = monthlyValue * UNIVERSAL_SPLIT.STEWARDSHIP;
   const tenantResilienceUsd = monthlyValue * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -1673,7 +1673,7 @@ export interface AirbnbResult {
     carbonAvoidedPerNight: number;
   };
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   split: {
     hostYieldUsd: number; // 70% to Host
     neighborhoodBufferUsd: number; // 20% to Stewardship
@@ -1728,7 +1728,7 @@ export function calculateAirbnbSettlement(input: AirbnbInput): AirbnbResult {
   const carbonAvoidedKg = hotelCarbonKg - homeStayCarbonKg;
   const carbonAvoidedPerNight = carbonAvoidedKg / input.numberOfNights;
   
-  // Apply 70/20/10 split to booking value
+  // Apply Dynamic BPS split to booking value
   const hostYieldUsd = totalBookingValue * UNIVERSAL_SPLIT.FOUNDER_YIELD;
   const neighborhoodBufferUsd = totalBookingValue * UNIVERSAL_SPLIT.STEWARDSHIP;
   const publicInfrastructureUsd = totalBookingValue * UNIVERSAL_SPLIT.PUBLIC_RESILIENCE;
@@ -1944,7 +1944,7 @@ export function calculateREFSSettlement(input: REFSInput): REFSResult {
 export function verifyREFSZeroGreed(result: REFSResult): { compliant: boolean; violations: string[] } {
   const violations: string[] = [];
   
-  // Check standard 70/20/10 compliance
+  // Check standard Dynamic BPS compliance
   if (result.complianceStatus !== 'COMPLIANT') {
     violations.push('Universal Dynamic BPS split not maintained (Σ must equal 10,000 BPS)');
   }
@@ -1985,7 +1985,7 @@ export function verifyGeniusActCompliance(
   const proofOfExtraction = !!verificationHash && verificationHash.length === 64;
   if (!proofOfExtraction) violations.push('Missing or invalid Proof of Extraction hash');
   
-  // Check 2: Universal Split verification (70/20/10)
+  // Check 2: Universal Split verification (Dynamic BPS)
   const splitValid = verifyZeroGreedPolicy(split) === 'COMPLIANT';
   if (!splitValid) violations.push('Universal Dynamic BPS split not maintained (Σ must equal 10,000 BPS)');
   
@@ -2025,7 +2025,7 @@ export function verifyGeniusActCompliance(
 /**
  * Dynamic BPS Settlement Executor
  *
- * The historic 70/20/10 split (EARNER 7000 / NODE 2000 / DEPIN 1000) is
+ * The historic Dynamic BPS split (EARNER 7000 / NODE 2000 / DEPIN 1000) is
  * DEPRECATED. Splits are now fully operator-configured at runtime via
  * `BpsDistributionConfig` (see `lib/bps-config.ts`). The ONLY immutable floor
  * is that all legs — EARNER + NODE + DEPIN + any customLegs — sum to exactly

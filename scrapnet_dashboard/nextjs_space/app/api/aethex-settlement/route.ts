@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
             }),
             totalValueUsd: settlement.valuationUsd,
             founderYieldUsd: settlement.valuationUsd * 0.7,   // Asset Sovereign
-            stewardshipUsd: settlement.valuationUsd * 0.2,     // Platform Processor
+            stewardshipUsd: settlement.valuationUsd * 0.2,     // Verification Node
             publicResilienceUsd: settlement.valuationUsd * 0.1, // Public Resilience
             carbonAvoidedTonnes: settlement.displacementResult.co2eSavedTonnes,
             complianceState: 'COMPLIANT',
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
             }),
             totalValueUsd: settlement.valuationUsd,
             founderYieldUsd: settlement.valuationUsd * 0.7,   // Asset Sovereign
-            stewardshipUsd: settlement.valuationUsd * 0.2,     // Platform Processor
+            stewardshipUsd: settlement.valuationUsd * 0.2,     // Verification Node
             publicResilienceUsd: settlement.valuationUsd * 0.1, // Public Resilience
             carbonAvoidedTonnes: settlement.displacementResult.co2eSavedTonnes,
             complianceState: 'COMPLIANT',

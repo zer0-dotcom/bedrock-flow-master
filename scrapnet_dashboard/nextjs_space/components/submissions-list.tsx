@@ -358,7 +358,7 @@ export default function SubmissionsList({ walletAddress }: { walletAddress: stri
                           <div className="text-xs text-gray-500">
                             ${sub.settlement.treasuryShare.toFixed(2)}
                           </div>
-                          <div className="text-[9px] text-gray-600">Platform Processor</div>
+                          <div className="text-[9px] text-gray-600">Verification Node</div>
                         </div>
                         <div className="text-center p-2 bg-purple-500/5 rounded border border-purple-500/20">
                           <div className="text-lg font-bold text-purple-400">{bpsTable ? `${bpsTable.depinPct}%` : '—'}</div>

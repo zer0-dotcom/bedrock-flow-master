@@ -914,7 +914,7 @@ model InternationalTransaction {
   vatAmount           Float?            @map("vat_amount")
   taxJurisdiction     String?           @map("tax_jurisdiction")
   
-  // Carbon Credit Distribution (70/20/10)
+  // Carbon Credit Distribution (Dynamic BPS)
   creditDistributionJson String?        @map("credit_distribution_json") @db.Text
   bankShare           Float?            @map("bank_share")
   platformShare       Float?            @map("platform_share")
@@ -1109,7 +1109,7 @@ model FinancedEmissionLog {
   @@map("financed_emission_logs")
 }
 
-// ==================== UNIVERSAL LEDGER (70/20/10 Law) ====================
+// ==================== UNIVERSAL LEDGER (Dynamic BPS Law) ====================
 
 enum ExtractionType {
   DEAD_MASS           // Module 1: Industrial Extraction
@@ -1432,7 +1432,7 @@ model LegacyAudit {
   marketRateMultiplier  Float             @default(1.0) @map("market_rate_multiplier")
   legacyYieldUsd        Float             @map("legacy_yield_usd")
   
-  // 70/20/10 Split
+  // Dynamic BPS Split
   founderYieldUsd       Float             @map("founder_yield_usd")
   stewardshipUsd        Float             @map("stewardship_usd")
   publicResilienceUsd   Float             @map("public_resilience_usd")
@@ -1661,7 +1661,7 @@ enum SubmissionStatus {
   DRAFT                       // Initial upload, not yet parsed
   PENDING_FORENSIC_VERIFICATION // Parsed, awaiting HUM event match
   FORENSIC_VERIFIED           // Matched a notarized HUM event
-  SETTLEMENT_COMPLETE         // 70/20/10 split executed
+  SETTLEMENT_COMPLETE         // Dynamic BPS split executed
   REJECTED_FORENSIC           // Failed forensic verification
   // v2.4 — Sentinel Verdict tiers
   AUTO_APPROVED
@@ -1812,10 +1812,10 @@ model Settlement {
   // Total value being settled
   totalValueUsd         Float               @map("total_value_usd")
 
-  // 70/20/10 split — Verified Asset Value / Platform Processor / Public Resilience
+  // Dynamic BPS split — Verified Asset Value / Verification Node / Public Resilience
   assetOwnerShare       Float               @map("asset_owner_share")       // 70% Verified Asset Value
   assetOwnerWallet      String              @map("asset_owner_wallet")
-  treasuryShare         Float               @map("treasury_share")          // 20% Platform Processor
+  treasuryShare         Float               @map("treasury_share")          // 20% Verification Node
   treasuryWallet        String              @default("BEDROCK_ESG_TREASURY") @map("treasury_wallet")
   specialistShare       Float               @map("specialist_share")        // 10% Public Resilience
   specialistId          String?             @map("specialist_id")

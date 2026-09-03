@@ -380,7 +380,7 @@ export default function LedgerContent() {
                   Dynamic BPS Settlement Allocation
                 </h2>
                 <p className="text-gray-500 text-sm">
-                  Operator-configured split{bpsTable ? ` (${bpsTable.label})` : ''} — 10,000 BPS immutable floor
+                  Operator-configured · Σ 10,000 BPS immutable floor
                 </p>
               </div>
             </div>
@@ -396,7 +396,7 @@ export default function LedgerContent() {
               </div>
               <div className="pentagon-card p-4 border-amber-500/40">
                 <div className="text-4xl font-bold text-amber-400">{bpsTable ? `${bpsTable.nodePct}%` : '—'}</div>
-                <div className="text-sm font-medium text-amber-300 mt-1">Platform Processor</div>
+                <div className="text-sm font-medium text-amber-300 mt-1">Verification Node</div>
                 <div className="text-xs text-gray-500 mt-2">Node hardening + Debt-Erasure Protocol</div>
                 <div className="text-xs text-amber-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>
                 <div className="text-lg font-semibold text-white">
