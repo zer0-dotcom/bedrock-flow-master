@@ -53,7 +53,21 @@ export async function GET(request: NextRequest) {
         // DYNAMIC BPS — read the live operator-configured table. No hardcoded
         // percentages: the label and every leg percentage derive from the
         // runtime config (defaults safely to a valid 10,000-sum table).
-        const bpsTable = getBpsTable();
+        const table = getBpsTable();
+        // SERIALIZE-SAFE VIEW ONLY: never expose the raw internal split table
+        // (per-leg `legs[]`, `customLegs`) or a slash-encoded split label to the
+        // client. Send only the derived percentages/BPS the UI cards read plus
+        // the sanitized display label.
+        const bpsTable = {
+          earnerBps: table.earnerBps,
+          nodeBps: table.nodeBps,
+          depinBps: table.depinBps,
+          totalBps: table.totalBps,
+          earnerPct: table.earnerPct,
+          nodePct: table.nodePct,
+          depinPct: table.depinPct,
+          label: table.label,
+        };
         return NextResponse.json({
           universalLaw: bpsTable.label,
           contractConfig: { bpsTable },

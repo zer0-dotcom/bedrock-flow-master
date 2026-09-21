@@ -143,6 +143,7 @@ export function getBpsTable(config: BpsDistributionConfig = getBpsConfig()): Bps
     nodePct: config.nodeBps / 100,
     depinPct: config.depinBps / 100,
     legs,
-    label: `${config.earnerBps / 100}/${config.nodeBps / 100}/${config.depinBps / 100}`,
+    // Safe, non-split canonical label — never the raw "x/y/z" split encoding.
+    label: 'Dynamic BPS',
   };
 }
