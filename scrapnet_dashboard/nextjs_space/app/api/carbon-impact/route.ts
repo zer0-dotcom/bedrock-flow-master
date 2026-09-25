@@ -131,9 +131,53 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error calculating total carbon impact:', error);
-    return NextResponse.json(
-      { error: 'Failed to calculate carbon impact' },
-      { status: 500 }
-    );
+    // SSR-safe fallback: mirror the success payload shape with neutral/zeroed
+    // values so a Prisma/DB failure never yields a 500.
+    return NextResponse.json({
+      // Summary
+      totalVerifiedImpactTonnes: 0,
+      totalImpactTonnes: 0,
+      timestamp: new Date().toISOString(),
+
+      // Per-engine breakdown (verified only)
+      asphalt: {
+        name: 'Asphalt (RAP)',
+        icon: 'emerald',
+        projectCount: 0,
+        savedKg: 0,
+        savedTonnes: 0,
+        unit: 'kg CO₂',
+        displayValue: 0,
+        contributionPercent: 0,
+      },
+      biochar: {
+        name: 'Biochar (CDR)',
+        icon: 'amber',
+        batchCount: 0,
+        verifiedTonnes: 0,
+        totalTonnes: 0,
+        unit: 't CO₂',
+        displayValue: 0,
+        contributionPercent: 0,
+      },
+      metal: {
+        name: 'Metal (Recovery)',
+        icon: 'cyan',
+        logCount: 0,
+        avoidedKg: 0,
+        avoidedTonnes: 0,
+        totalTonnes: 0,
+        unit: 't CO₂',
+        displayValue: 0,
+        contributionPercent: 0,
+      },
+
+      // Equivalencies
+      equivalencies: {
+        treesPlanted: 0,
+        carMilesAvoided: 0,
+        homesYearOffset: 0,
+      },
+    });
   }
 }

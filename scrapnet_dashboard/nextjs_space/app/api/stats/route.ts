@@ -59,9 +59,17 @@ export async function GET() {
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch statistics' },
-      { status: 500 }
-    );
+    // SSR-safe fallback: mirror the success `stats` shape with neutral/zeroed
+    // values and empty lists so a Prisma/DB failure never yields a 500.
+    const stats = {
+      totalProjects: 0,
+      totalCarbonSaved: 0,
+      averageCarbonScore: 0,
+      averageRapUsage: 0,
+      projectsMeetingGreenTarget: 0,
+      greenTargetPercentage: 0,
+      monthlyData: [],
+    };
+    return NextResponse.json(stats);
   }
 }
