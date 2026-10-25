@@ -1,38 +1,32 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 import { SidebarProvider, useSidebar } from '@/contexts/sidebar-context';
+import ChatWindow from '@/components/ChatWindow';
 
-// Routes that should be standalone (no sidebar/header)
 const STANDALONE_ROUTES = ['/impact-calculator', '/global-ledger'];
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
-  
-  // Check if this is a standalone route (public calculator, etc.)
+  const [chatOpen, setChatOpen] = useState(false);
+
   const isStandalone = STANDALONE_ROUTES.some(route => pathname.startsWith(route));
 
-  if (isStandalone) {
-    // Render without sidebar/header for standalone pages
-    return <>{children}</>;
-  }
+  if (isStandalone) return <>{children}</>;
 
-  // Standard layout with sidebar and header
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           onClick={close}
           aria-hidden="true"
         />
       )}
-      
-      {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out
         md:relative md:translate-x-0
@@ -40,14 +34,13 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       `}>
         <Sidebar />
       </div>
-      
-      {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden w-full">
-        <Header />
+        <Header onAIWorkflowClick={() => setChatOpen(prev => !prev)} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
       </div>
+      {chatOpen && <ChatWindow open={chatOpen} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }

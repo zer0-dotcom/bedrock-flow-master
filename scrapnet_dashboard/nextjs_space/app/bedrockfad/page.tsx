@@ -1,4 +1,6 @@
 "use client";
+import LiveAvatarAgent from "@/components/LiveAvatarAgent";
+import GuideWizardV2 from "@/components/GuideWizardV2";
 
 import React, { useState, useEffect } from "react";
 
@@ -313,6 +315,9 @@ export default function BedrockFADPage() {
         </div>
 
       </div>
-    </div>
+    
+
+      <LiveAvatarAgent />
+</div>
   );
 }
