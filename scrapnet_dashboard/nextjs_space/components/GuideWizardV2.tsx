@@ -19,7 +19,7 @@ const PERSONAS: Persona[] = [
     name: 'ARIA', 
     role: 'Asset Discovery & Onboarding Guide', 
     callsign: 'COMMAND // NODE-01',
-    img: '/avatars/Astra.avif', 
+    img: '/avatars/astra.avif', 
     neon: '#00F0FF',
     border: 'border-cyan-400',
     halo: 'rgba(0, 240, 255, 0.45)',
