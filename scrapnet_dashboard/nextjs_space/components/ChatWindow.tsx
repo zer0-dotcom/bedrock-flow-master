@@ -436,19 +436,24 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
                 onError={(e) => {
                   const v = e.currentTarget;
                   v.style.display = 'none';
-                  const img = v.nextElementSibling as HTMLImageElement | null;
-                  if (img) img.style.display = 'block';
+                  const pic = v.nextElementSibling as HTMLElement | null;
+                  if (pic) pic.style.display = 'block';
                 }}
                 className="w-full h-full object-cover"
               />
               )}
-              <img
+              <picture
                 key={`${activePersona.id}-fallback`}
-                src={activePersona.portrait}
-                alt={activePersona.name}
                 style={{ display: activePersona.video ? 'none' : 'block' }}
-                className="w-full h-full object-cover"
-              />
+              >
+                <source srcSet={activePersona.portrait} type="image/avif" />
+                <source srcSet={activePersona.portrait.replace('.avif', '.webp')} type="image/webp" />
+                <img
+                  src={activePersona.portrait.replace('.avif', '.webp')}
+                  alt={activePersona.name}
+                  className="w-full h-full object-cover"
+                />
+              </picture>
             </div>
 
             <div>
@@ -489,7 +494,7 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
 
         {/* ── PERSONA TABS ─────────────────────────────────────────────── */}
         <div
-          className="relative flex items-center gap-1 px-3 py-2 overflow-x-auto"
+          className="relative flex items-center gap-1 px-3 py-2 overflow-x-auto scrollbar-hide"
           style={{
             zIndex: 10,
             borderBottom: `1px solid ${ac}0.15)`,
@@ -511,21 +516,22 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
                 }}
                 onClick={() => switchPersona(p)}
               >
-                <img
-                  src={p.portrait}
-                  alt={p.name}
-                  className="rounded-full object-cover"
-                  style={{
-                    width: 32,
-                    height: 32,
-                    border: active
-                      ? `2px solid ${p.color}`
-                      : '2px solid rgba(255,255,255,0.15)',
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/avatars/cipher.avif'; // generic fallback — cipher.avif confirmed on disk
-                  }}
-                />
+                <picture>
+                  <source srcSet={p.portrait} type="image/avif" />
+                  <source srcSet={p.portrait.replace('.avif', '.webp')} type="image/webp" />
+                  <img
+                    src={p.portrait.replace('.avif', '.webp')}
+                    alt={p.name}
+                    className="rounded-full object-cover"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      border: active
+                        ? `2px solid ${p.color}`
+                        : '2px solid rgba(255,255,255,0.15)',
+                    }}
+                  />
+                </picture>
                 <span
                   className="text-[9px] font-medium leading-none"
                   style={{
