@@ -1,12 +1,153 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { X, Send } from 'lucide-react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 
+// ─── SPRINT_8_CLEAN_REWRITE ───────────────────────────────────────────────
+// Defects resolved:
+//  1. Robotic voice  → browser TTS REMOVED; ElevenLabs /api/tts only
+//  2. Vexa 404       → vexa.avif (now on disk)
+//  3. Dead tab clicks → all overlay layers pointer-events-none; tabs pointer-events-auto
+//  4. Flat glass     → inline backdropFilter, NOT Tailwind backdrop-blur class
+// Additional: speechRequestId race-condition guard; <video muted autoPlay loop>
+// Roster: 8 personas, Orion added, Vexa exactly once, all portraits lowercase .avif
+// Contract: POST /api/chat { messages, persona } → { reply }
+// ─────────────────────────────────────────────────────────────────────────
+
+interface PersonaDef {
+  id: string;
+  name: string;
+  role: string;
+  voiceId: string;
+  portrait: string;
+  video: string | null; // null → no idle.mp4 on disk; render portrait directly
+  color: string;
+  accent: string;
+  greeting: string;
+}
+
+// ─── PERSONA REGISTRY ────────────────────────────────────────────────────
+const PERSONAS: PersonaDef[] = [
+  {
+    id: 'zero',
+    name: 'Zero',
+    role: 'Systems Architect',
+    voiceId: 'nPczCjzI2devNBz1zQrb',
+    portrait: '/avatars/zero.avif',
+    video: '/avatars/zero/idle.mp4',
+    color: '#8B5CF6',
+    accent: 'rgba(139,92,246,',
+    greeting:
+      "I'm Zer0, the lead AI intelligence of the SPEXTER platform. " +
+      "Carbon accounting, regulatory compliance, asset-level analysis — what are we solving today?",
+  },
+  {
+    id: 'nova',
+    name: 'Nova',
+    role: 'Data Intelligence',
+    voiceId: 'MF3mGyEYCl7XYWbV9V6O',
+    portrait: '/avatars/nova.avif',
+    video: '/avatars/nova/idle.mp4',
+    color: '#06B6D4',
+    accent: 'rgba(6,182,212,',
+    greeting:
+      "Nova online. Real-time monitoring, anomaly detection, trend analysis. " +
+      "What data question are we working?",
+  },
+  {
+    id: 'aura',
+    name: 'Aura',
+    role: 'ESG Analytics',
+    voiceId: 'piTKgcLEGmPE4e6mEKli',
+    portrait: '/avatars/aura.avif',
+    video: '/avatars/aura/idle.mp4',
+    color: '#10B981',
+    accent: 'rgba(16,185,129,',
+    greeting:
+      "Aura here. ESG analytics, scenario modeling, regulatory risk exposure. " +
+      "What are we analyzing?",
+  },
+  {
+    id: 'echo',
+    name: 'Echo',
+    role: 'Audit & Compliance',
+    voiceId: 'EXAVITQu4vr4xnSDxMaL',
+    portrait: '/avatars/echo.avif',
+    video: '/avatars/echo/idle.mp4',
+    color: '#F59E0B',
+    accent: 'rgba(245,158,11,',
+    greeting:
+      "Echo active. TCFD, ISSB IFRS S2, SEC Climate Rules, EU CSRD/ESRS E1. " +
+      "Which framework are we working?",
+  },
+  {
+    id: 'aria',
+    name: 'Aria',
+    role: 'Operations Lead',
+    voiceId: '21m00Tcm4TlvDq8ikWAM',
+    portrait: '/avatars/aria.avif',
+    video: '/avatars/aria/idle.mp4',
+    color: '#EC4899',
+    accent: 'rgba(236,72,153,',
+    greeting:
+      "Aria online. Operations, workflows, verification pipeline status. " +
+      "What are we running?",
+  },
+  {
+    id: 'vexa',
+    name: 'Vexa',
+    role: 'Risk Intelligence',
+    voiceId: 'kzu3kyvzVxdPA7NdrgD7',
+    portrait: '/avatars/vexa.avif',
+    video: '/avatars/vexa/idle.mp4',
+    color: '#6366F1',
+    accent: 'rgba(99,102,241,',
+    greeting:
+      "Vexa here. Risk exposure, greenwashing flags, counterparty and regulatory risk. " +
+      "What risk are we sizing?",
+  },
+  {
+    id: 'lyra',
+    name: 'Lyra',
+    role: 'Carbon Markets',
+    voiceId: 'AZnzlk1XvdvUeBnXmlld',
+    portrait: '/avatars/lyra.avif',
+    video: '/avatars/lyra/idle.mp4',
+    color: '#F97316',
+    accent: 'rgba(249,115,22,',
+    greeting:
+      "Lyra online. Carbon credits, CDR pricing, registries and offtake. " +
+      "What market question are we working?",
+  },
+  {
+    id: 'orion',
+    name: 'Orion',
+    role: 'Infrastructure Intelligence',
+    voiceId: 'XB0fDUnXU5powFXDhCwa',
+    portrait: '/avatars/orion.avif',
+    video: null,
+    color: '#14B8A6',
+    accent: 'rgba(20,184,166,',
+    greeting:
+      "Orion online. Facility energy, thermal waste, GhostConverter asset analysis. " +
+      "Which facility are we examining?",
+  },
+];
+
+type Persona = PersonaDef;
+
+// Strip markdown before speaking; cap length to bound ElevenLabs usage.
+const toSpeech = (t: string) => t.replace(/[*_`#>~|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 1000);
+
+// ─── TYPES ───────────────────────────────────────────────────────────────
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  persona?: string;
+  personaId?: string;
 }
 
 interface ChatWindowProps {
@@ -14,320 +155,479 @@ interface ChatWindowProps {
   onClose?: () => void;
 }
 
-const PERSONAS = [
-  { id: 'zero', name: 'Zero', role: 'Systems Architect',  color: 'from-violet-500 to-purple-600', img: '/avatars/zero/idle.mp4' },
-  { id: 'nova', name: 'Nova', role: 'Data Intelligence',  color: 'from-blue-500 to-cyan-600', img: '/avatars/nova.avif'    },
-  { id: 'aura', name: 'Aura', role: 'ESG Analytics',      color: 'from-emerald-500 to-teal-600', img: '/avatars/aura.avif' },
-  { id: 'echo', name: 'Echo', role: 'Audit & Compliance', color: 'from-orange-500 to-amber-600', img: '/avatars/echo.avif' },
-  { id: 'aria', name: 'Aria', role: 'Operations Lead',    color: 'from-pink-500 to-rose-600', img: '/avatars/aria.avif'    },
-  { id: 'vexa', name: 'Vexa', role: 'Risk Intelligence',  color: 'from-red-500 to-orange-600', img: '/avatars/vexa/idle.mp4'   },
-  { id: 'lyra', name: 'Lyra', role: 'Carbon Markets',     color: 'from-indigo-500 to-blue-600', img: '/avatars/lyra.avif'  },
-];
-const VOICE_PROFILES: Record<string, { pitch: number; rate: number; lang: string }> = {
-  zero: { pitch: 0.85, rate: 0.95, lang: 'en-US' }, // deep, authoritative
-  nova: { pitch: 1.05, rate: 1.05, lang: 'en-US' }, // bright, data-driven
-  aura: { pitch: 1.10, rate: 0.90, lang: 'en-US' }, // warm, measured
-  echo: { pitch: 0.90, rate: 1.00, lang: 'en-US' }, // firm, compliance
-  aria: { pitch: 1.15, rate: 1.05, lang: 'en-US' }, // sharp, operational
-  vexa: { pitch: 0.80, rate: 0.92, lang: 'en-US' }, // cold, risk-focused
-  lyra: { pitch: 1.08, rate: 0.98, lang: 'en-US' }, // melodic, analytical
-};
-
-const FEMALE_PERSONAS = ['nova','aura','aria','lyra','echo'];
-
-function speakText(text: string, personaId: string) {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const clean = text.replace(/[*_`#>~]/g, '').slice(0, 400);
-  const profile = VOICE_PROFILES[personaId] ?? VOICE_PROFILES['zero'];
-  const isFemale = FEMALE_PERSONAS.includes(personaId);
-
-  function doSpeak(voices: SpeechSynthesisVoice[]) {
-    const utt = new SpeechSynthesisUtterance(clean);
-    utt.pitch = profile.pitch;
-    utt.rate  = profile.rate;
-    utt.lang  = profile.lang;
-    const enVoices = voices.filter(v => v.lang.startsWith('en'));
-    const femaleKeywords = [
-      'female','zira','samantha','victoria','karen','moira','fiona','tessa',
-      'hazel','susan','catherine','linda','heera','aria','jenny','michelle',
-      'google uk english female','google us english'
-    ];
-    const maleKeywords = ['male','daniel','david','alex','oliver','fred','rishi','mark','george'];
-    const isMaleName = (n: string) => maleKeywords.some(k => n.toLowerCase().includes(k));
-
-    if (isFemale) {
-      // Female lock: candidate pool must never contain a male-keyword voice.
-      const femalePool = enVoices.filter(v => !isMaleName(v.name));
-      const pick =
-        femalePool.find(v => femaleKeywords.some(k => v.name.toLowerCase().includes(k))) ??
-        femalePool.find(v => v.localService) ??
-        femalePool[0];
-      if (pick) {
-        utt.voice = pick;                                // explicit override — the fix
-      } else {
-        utt.pitch = Math.min(2, profile.pitch + 0.4);    // no female voice on host -> bias feminine
-      }
-    } else {
-      // Male persona ("Zero") path — unchanged behavior.
-      let pick = enVoices.find(v => maleKeywords.some(k => v.name.toLowerCase().includes(k)));
-      if (!pick) pick = enVoices.find(v => v.localService) ?? enVoices[0];
-      if (pick) utt.voice = pick;
-    }
-    window.speechSynthesis.speak(utt);
-  }
-
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    doSpeak(voices);
-  } else {
-    window.speechSynthesis.onvoiceschanged = () => {
-      doSpeak(window.speechSynthesis.getVoices());
-      window.speechSynthesis.onvoiceschanged = null;
-    };
-  }
-}
-
-
+// ─── COMPONENT ───────────────────────────────────────────────────────────
 export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
-  const [persona, setPersona] = useState(PERSONAS[0]);
+  const isOpen = open;
+  const [activePersona, setActivePersona] = useState<Persona>(PERSONAS[0]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const dragRef    = useRef<HTMLDivElement>(null);
-  const posRef     = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
-  const isDragging = useRef(false);
-  const idleVideoRef = useRef<HTMLVideoElement>(null);
-  const talkVideoRef = useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Drag state
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOrigin = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+
+  // Audio + race-condition protection
+  const currentAudio = useRef<HTMLAudioElement | null>(null);
+  const speechReqId = useRef(0);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ── scroll to bottom ──────────────────────────────────────────────────
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Switch avatar video state
-  useEffect(() => {
-    if (loading) {
-      idleVideoRef.current?.pause();
-      if (talkVideoRef.current) {
-        talkVideoRef.current.currentTime = 0;
-        talkVideoRef.current.play().catch(() => {});
-      }
-    } else {
-      talkVideoRef.current?.pause();
-      if (idleVideoRef.current) {
-        idleVideoRef.current.currentTime = 0;
-        idleVideoRef.current.play().catch(() => {});
-      }
+  // ── stop all audio ────────────────────────────────────────────────────
+  const stopAllAudio = useCallback(() => {
+    speechReqId.current += 1;
+    if (currentAudio.current) {
+      currentAudio.current.pause();
+      currentAudio.current.src = '';
+      currentAudio.current = null;
     }
-  }, [loading]);
+    setIsSpeaking(false);
+  }, []);
 
-  // Reset videos on persona change
+  // ── greeting on persona switch + open ─────────────────────────────────
   useEffect(() => {
-    talkVideoRef.current?.pause();
-    if (idleVideoRef.current) {
-      idleVideoRef.current.currentTime = 0;
-      idleVideoRef.current.play().catch(() => {});
-    }
-  }, [persona]);
+    if (!isOpen) return;
+    stopAllAudio();
+    setMessages([
+      {
+        role: 'assistant',
+        content: activePersona.greeting,
+        personaId: activePersona.id,
+      },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePersona.id, isOpen]);
 
-  if (!open) return null;
+  // ── stop audio on close ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) stopAllAudio();
+  }, [isOpen, stopAllAudio]);
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return;
-    const userMsg: Message = { role: 'user', content: input.trim() };
-    setMessages(prev => [...prev, userMsg]);
+  // ── ElevenLabs TTS — ElevenLabs only, no browser TTS ──────────────
+  const speakWithElevenLabs = useCallback(
+    async (text: string, voiceId: string) => {
+      stopAllAudio();
+      const reqId = ++speechReqId.current;
+
+      try {
+        setIsSpeaking(true);
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voiceId }),
+        });
+
+        // stale — persona switched while awaiting response
+        if (reqId !== speechReqId.current) return;
+        if (!res.ok) {
+          console.error('[ChatWindow] TTS HTTP', res.status);
+          setIsSpeaking(false);
+          return;
+        }
+
+        const blob = await res.blob();
+        if (reqId !== speechReqId.current) return; // stale again
+
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        currentAudio.current = audio;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          if (reqId === speechReqId.current) setIsSpeaking(false);
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          if (reqId === speechReqId.current) setIsSpeaking(false);
+        };
+
+        await audio.play();
+      } catch (err) {
+        console.error('[ChatWindow] TTS error:', err);
+        if (reqId === speechReqId.current) setIsSpeaking(false);
+      }
+    },
+    [stopAllAudio],
+  );
+
+  // ── send message ──────────────────────────────────────────────────────
+  const sendMessage = useCallback(async () => {
+    const text = input.trim();
+    if (!text || isLoading) return;
+
+    const userMsg: Message = { role: 'user', content: text };
+    // Greeting is UI-only; /api/chat requires history to start with a user turn.
+    const history = [...messages, userMsg]
+      .filter((m, i) => !(i === 0 && m.role === 'assistant'))
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
-    setLoading(true);
+    setIsLoading(true);
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
-          persona: persona.id,
-        }),
+        body: JSON.stringify({ messages: history, persona: activePersona.id }),
       });
+
+      if (!res.ok) throw new Error(`chat HTTP ${res.status}`);
       const data = await res.json();
-      setMessages(prev => [
+
+      const reply: string = data.reply ?? data.message ?? 'No response.';
+
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: reply, personaId: activePersona.id },
+      ]);
+
+      await speakWithElevenLabs(toSpeech(reply), activePersona.voiceId);
+    } catch (err) {
+      console.error('[ChatWindow] agent-chat error:', err);
+      setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: data.reply ?? data.message ?? 'No response.',
-          persona: persona.id,
+          content: 'Connection error — check console.',
+          personaId: activePersona.id,
         },
       ]);
-      speakText(data.reply ?? data.message ?? '', persona.id);
-    } catch {
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: 'Connection error. Try again.', persona: persona.id },
-      ]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }
+  }, [input, isLoading, activePersona, speakWithElevenLabs]);
 
-  function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  // ── keyboard ──────────────────────────────────────────────────────────
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  }
+  };
 
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    isDragging.current = true;
-    posRef.current.startX = e.clientX - posRef.current.x;
-    posRef.current.startY = e.clientY - posRef.current.y;
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!isDragging.current) return;
-    posRef.current.x = e.clientX - posRef.current.startX;
-    posRef.current.y = e.clientY - posRef.current.startY;
-    if (dragRef.current) {
-      dragRef.current.style.transform =
-        `translate(${posRef.current.x}px, ${posRef.current.y}px)`;
+  // ── drag ──────────────────────────────────────────────────────────────
+  const onDragStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragOrigin.current = { mx: e.clientX, my: e.clientY, px: pos.x, py: pos.y };
+  };
+
+  const onDragMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+      setPos({
+        x: dragOrigin.current.px + (e.clientX - dragOrigin.current.mx),
+        y: dragOrigin.current.py + (e.clientY - dragOrigin.current.my),
+      });
+    },
+    [isDragging],
+  );
+
+  const onDragEnd = useCallback(() => setIsDragging(false), []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', onDragMove);
+      window.addEventListener('mouseup', onDragEnd);
     }
-  }
-  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    isDragging.current = false;
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  }
+    return () => {
+      window.removeEventListener('mousemove', onDragMove);
+      window.removeEventListener('mouseup', onDragEnd);
+    };
+  }, [isDragging, onDragMove, onDragEnd]);
+
+  // ── persona switch ────────────────────────────────────────────────────
+  const switchPersona = useCallback(
+    (p: Persona) => {
+      if (p.id === activePersona.id) return;
+      stopAllAudio();
+      setActivePersona(p);
+    },
+    [activePersona.id, stopAllAudio],
+  );
+
+  if (!isOpen) return null;
+
+  // ── colour aliases ────────────────────────────────────────────────────
+  const ac = activePersona.accent; // e.g. 'rgba(139,92,246,'
+  const color = activePersona.color;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none">
-      <div ref={dragRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} className="chat-glass pointer-events-auto w-full max-w-md h-[90vh] flex flex-col border border-border rounded-tl-2xl shadow-2xl overflow-hidden relative">
-        <div className="dc-grid" />
-        <div className="dc-scanline" />
+    <div
+      className="fixed z-[9999] select-none"
+      style={{
+        right: 16,
+        bottom: 16,
+        transform: `translate(${pos.x}px,${pos.y}px)`,
+      }}
+    >
+      {/* ── panel shell ─────────────────────────────────────────────── */}
+      <div
+        className="relative flex flex-col overflow-hidden rounded-2xl"
+        style={{
+          width: 420,
+          height: 580,
+          background: 'rgba(10,10,20,0.72)',
+          backdropFilter: 'blur(18px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+          border: `1px solid ${ac}0.35)`,
+          boxShadow: `0 0 40px ${ac}0.15), 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)`,
+        }}
+      >
+        {/* ── DC grid overlay — pointer-events-none ─────────────────── */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 0,
+            backgroundImage: `linear-gradient(${ac}0.12) 1px,transparent 1px),linear-gradient(90deg,${ac}0.12) 1px,transparent 1px)`,
+            backgroundSize: '28px 28px',
+            borderRadius: 'inherit',
+            animation: 'gridPulse 4s ease-in-out infinite',
+          }}
+        />
 
-        {/* Header with live avatar video */}
-        <div className={"flex items-center justify-between px-4 py-3 bg-gradient-to-r " + persona.color}>
-  
-        <div className="dc-grid" />
-        <div className="dc-scanline" />
-        <div className="chat-content flex items-center gap-3">
-            <div className="relative h-14 w-14 rounded-full overflow-hidden bg-black/30 flex-shrink-0 ring-2 ring-white/30">
-              {/* Idle video */}
+        {/* ── scanline — pointer-events-none ────────────────────────── */}
+        <div
+          className="absolute left-0 right-0 h-[2px] pointer-events-none"
+          style={{
+            zIndex: 1,
+            background: `linear-gradient(90deg,transparent,${ac}0.4),transparent)`,
+            animation: 'scanline 6s linear infinite',
+          }}
+        />
+
+        {/* ── HEADER ──────────────────────────────────────────────────── */}
+        <div
+          className="relative flex items-center justify-between px-4 py-3 cursor-grab active:cursor-grabbing"
+          style={{
+            zIndex: 10,
+            background: `${ac}0.12)`,
+            borderBottom: `1px solid ${ac}0.25)`,
+          }}
+          onMouseDown={onDragStart}
+        >
+          {/* avatar + name — pointer-events-none so drag works */}
+          <div className="flex items-center gap-3 pointer-events-none">
+            {/* video avatar */}
+            <div
+              className="relative flex-shrink-0 rounded-full overflow-hidden"
+              style={{
+                width: 48,
+                height: 48,
+                boxShadow: `0 0 0 2px ${color}`,
+              }}
+            >
+              {activePersona.video && (
               <video
-                ref={idleVideoRef}
-                key={persona.id + '-idle'}
-                src={"/avatars/" + persona.id + "/idle.mp4"}
+                key={activePersona.id}
+                src={activePersona.video}
+                muted
                 autoPlay
                 loop
-                muted
                 playsInline
-                className={"absolute inset-0 w-full h-full object-cover transition-opacity duration-300 " + (loading ? "opacity-0" : "opacity-100")}
+                poster={activePersona.portrait}
+                onError={(e) => {
+                  const v = e.currentTarget;
+                  v.style.display = 'none';
+                  const img = v.nextElementSibling as HTMLImageElement | null;
+                  if (img) img.style.display = 'block';
+                }}
+                className="w-full h-full object-cover"
               />
-              {/* Talking video */}
-              <video
-                ref={talkVideoRef}
-                key={persona.id + '-talk'}
-                src={"/avatars/" + persona.id + "/talking.mp4"}
-                muted
-                playsInline
-                loop
-                className={"absolute inset-0 w-full h-full object-cover transition-opacity duration-300 " + (loading ? "opacity-100" : "opacity-0")}
+              )}
+              <img
+                key={`${activePersona.id}-fallback`}
+                src={activePersona.portrait}
+                alt={activePersona.name}
+                style={{ display: activePersona.video ? 'none' : 'block' }}
+                className="w-full h-full object-cover"
               />
-              {/* Fallback initial letter */}
-              <div className={"absolute inset-0 flex items-center justify-center bg-gradient-to-br " + persona.color + " transition-opacity duration-300 " + (true ? "opacity-0" : "opacity-100")}>
-                <span className="text-xl font-bold text-white">{persona.name[0]}</span>
-              </div>
             </div>
+
             <div>
-              <p className="text-sm font-bold text-white leading-tight">{persona.name}</p>
-              <p className="text-xs text-white/70">{persona.role}</p>
+              <div className="text-sm font-semibold text-white leading-tight">
+                {activePersona.name}
+              </div>
+              <div
+                className="text-xs leading-tight"
+                style={{ color }}
+              >
+                {activePersona.role}
+              </div>
               <div className="flex items-center gap-1 mt-0.5">
-                <span className={"h-1.5 w-1.5 rounded-full " + (loading ? "bg-amber-400 animate-pulse" : "bg-emerald-400")} />
-                <span className="text-[10px] text-white/60">{loading ? "responding..." : "online"}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] text-emerald-400">online</span>
+                {isSpeaking && (
+                  <span
+                    className="text-[10px] ml-1"
+                    style={{ color }}
+                  >
+                    ◆ speaking
+                  </span>
+                )}
               </div>
             </div>
           </div>
+
+          {/* close — explicit pointer-events-auto, stop drag propagation */}
           <button
+            className="pointer-events-auto flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            style={{ width: 28, height: 28, color: 'rgba(255,255,255,0.6)' }}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            aria-label="Close chat"
           >
-            <X className="h-4 w-4 text-white" />
+            ✕
           </button>
         </div>
 
-        {/* Persona switcher */}
-        <div className="flex flex-wrap gap-1 px-3 py-2 border-b border-border bg-muted/30">
-          {PERSONAS.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setPersona(p)}
-              className={"flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all " + (
-                persona.id === p.id
-                  ? "bg-gradient-to-r " + p.color + " text-white shadow-sm"
-                  : "bg-muted hover:bg-muted/80 text-muted-foreground"
-              )}
-            >
-              <img src={p.img} alt={p.name} className="w-10 h-10 rounded-full object-cover" />
-              {p.name}
-            </button>
-          ))}
+        {/* ── PERSONA TABS ─────────────────────────────────────────────── */}
+        <div
+          className="relative flex items-center gap-1 px-3 py-2 overflow-x-auto"
+          style={{
+            zIndex: 10,
+            borderBottom: `1px solid ${ac}0.15)`,
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          {PERSONAS.map((p) => {
+            const active = activePersona.id === p.id;
+            return (
+              <button
+                key={p.id}
+                className="pointer-events-auto relative flex flex-col items-center gap-0.5 flex-shrink-0 rounded-lg px-2 py-1 transition-all"
+                style={{
+                  background: active ? `${p.accent}0.15)` : 'transparent',
+                  border: active
+                    ? `1px solid ${p.accent}0.45)`
+                    : '1px solid transparent',
+                }}
+                onClick={() => switchPersona(p)}
+              >
+                <img
+                  src={p.portrait}
+                  alt={p.name}
+                  className="rounded-full object-cover"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    border: active
+                      ? `2px solid ${p.color}`
+                      : '2px solid rgba(255,255,255,0.15)',
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/avatars/cipher.avif'; // generic fallback — cipher.avif confirmed on disk
+                  }}
+                />
+                <span
+                  className="text-[9px] font-medium leading-none"
+                  style={{
+                    color: active ? p.color : 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  {p.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-[#0a0f1e]">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center opacity-50 gap-2 select-none">
-              <div className={"h-12 w-12 rounded-full bg-gradient-to-br " + persona.color + " flex items-center justify-center"}>
-                <span className="text-lg font-bold text-white">{persona.name[0]}</span>
-              </div>
-              <p className="text-sm font-medium">{persona.name} is ready</p>
-              <p className="text-xs text-muted-foreground">{persona.role}</p>
-            </div>
-          )}
+        {/* ── MESSAGES ─────────────────────────────────────────────────── */}
+        <div
+          className="relative flex-1 overflow-y-auto px-4 py-3 space-y-3"
+          style={{ zIndex: 10 }}
+        >
           {messages.map((msg, i) => (
-            <div key={i} className={"flex " + (msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-              <div className={"max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap " + (
-                msg.role === 'user'
-                  ? 'bg-indigo-700 text-white rounded-br-sm'
-                  : 'bg-[#1a2035] text-white/90 rounded-bl-sm border border-white/10'
-              )}>
+            <div
+              key={i}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className="max-w-[82%] text-sm px-3 py-2 rounded-xl leading-relaxed"
+                style={
+                  msg.role === 'user'
+                    ? {
+                        background: `${ac}0.25)`,
+                        border: `1px solid ${ac}0.4)`,
+                        color: '#E2E8F0',
+                      }
+                    : {
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#CBD5E1',
+                      }
+                }
+              >
                 {msg.content}
               </div>
             </div>
           ))}
-          {loading && (
+
+          {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-[#1a2035] rounded-2xl rounded-bl-sm px-3 py-2.5 border border-white/10">
-                <div className="flex gap-1 items-center">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce" style={{animationDelay:'0ms'}} />
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce" style={{animationDelay:'150ms'}} />
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce" style={{animationDelay:'300ms'}} />
-                </div>
+              <div
+                className="px-3 py-2 rounded-xl text-sm"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#94A3B8',
+                }}
+              >
+                <span className="animate-pulse">● ● ●</span>
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
+
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="px-3 py-3 border-t border-border bg-card">
-          <div className="flex gap-2 items-end">
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder={"Ask " + persona.name + "..."}
-              rows={1}
-              className="flex-1 resize-none rounded-xl border border-border bg-muted px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary max-h-24 overflow-y-auto"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || loading}
-              className={"flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br " + persona.color + " text-white transition-opacity disabled:opacity-40"}
-              aria-label="Send"
+        {/* ── INPUT BAR ────────────────────────────────────────────────── */}
+        <div
+          className="relative flex items-center gap-2 px-3 py-3"
+          style={{
+            zIndex: 10,
+            borderTop: `1px solid ${ac}0.2)`,
+          }}
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`Ask ${activePersona.name}…`}
+            disabled={isLoading}
+            className="pointer-events-auto flex-1 bg-transparent text-sm text-white outline-none"
+            style={{ caretColor: color }}
+          />
+
+          <button
+            onClick={sendMessage}
+            disabled={isLoading || !input.trim()}
+            className="pointer-events-auto flex items-center justify-center rounded-full transition-all disabled:opacity-40 flex-shrink-0"
+            style={{ width: 32, height: 32, background: color }}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
         </div>
-
       </div>
     </div>
   );
