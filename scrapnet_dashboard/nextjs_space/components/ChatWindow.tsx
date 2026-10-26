@@ -191,25 +191,6 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
     setIsSpeaking(false);
   }, []);
 
-  // ── greeting on persona switch + open ─────────────────────────────────
-  useEffect(() => {
-    if (!isOpen) return;
-    stopAllAudio();
-    setMessages([
-      {
-        role: 'assistant',
-        content: activePersona.greeting,
-        personaId: activePersona.id,
-      },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePersona.id, isOpen]);
-
-  // ── stop audio on close ───────────────────────────────────────────────
-  useEffect(() => {
-    if (!isOpen) stopAllAudio();
-  }, [isOpen, stopAllAudio]);
-
   // ── ElevenLabs TTS — ElevenLabs only, no browser TTS ──────────────
   const speakWithElevenLabs = useCallback(
     async (text: string, voiceId: string) => {
@@ -256,6 +237,27 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
     },
     [stopAllAudio],
   );
+
+  // ── greeting on persona switch + open ─────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const greeting = activePersona.greeting;
+    const voiceId = activePersona.voiceId;
+    setMessages([
+      {
+        role: 'assistant',
+        content: greeting,
+        personaId: activePersona.id,
+      },
+    ]);
+    speakWithElevenLabs(toSpeech(greeting), voiceId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePersona.id, isOpen]);
+
+  // ── stop audio on close ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) stopAllAudio();
+  }, [isOpen, stopAllAudio]);
 
   // ── send message ──────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
