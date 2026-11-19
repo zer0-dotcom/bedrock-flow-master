@@ -298,7 +298,7 @@ function buildCertificateHtml(submission: Record<string, unknown>, settlement: R
         <div class="pe-label">Date of Certification</div>
       </div>
     </div>
-    <div class="watermark">BEDROCK ESG · AETHEXER SENTINEL · SOLANA DEVNET</div>
+    <div class="watermark">BEDROCK ESG · AETHEXER SENTINEL · SOLANA MAINNET-BETA</div>
   </div>
 </body>
 </html>`;

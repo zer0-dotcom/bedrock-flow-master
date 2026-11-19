@@ -69,7 +69,7 @@ interface VaultData {
   }>;
 }
 
-const MAINNET_MINT_ADDRESS = 'Eb4mSecyZh6BQ2wm5rbBnB2GNJu8iuEqGq53YHBVJ88V';
+const MAINNET_MINT_ADDRESS = '4AoaHVtx5eT7yfVEKr5CHJbWjpU7Ns2mGT8oRuzn3f8p';
 const MAINNET_EXPLORER_URL = `https://explorer.solana.com/address/${MAINNET_MINT_ADDRESS}`;
 
 const roleIcons: Record<string, React.ReactNode> = {

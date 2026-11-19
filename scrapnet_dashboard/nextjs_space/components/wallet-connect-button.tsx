@@ -69,7 +69,7 @@ export default function WalletConnectButton() {
                 )}
               </button>
               <a
-                href={`https://explorer.solana.com/address/${publicKey.toBase58()}?cluster=devnet`}
+                href={`https://explorer.solana.com/address/${publicKey.toBase58()}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 hover:bg-slate-700 rounded-md transition-colors"
@@ -78,7 +78,7 @@ export default function WalletConnectButton() {
                 <ExternalLink className="h-4 w-4 text-slate-400 hover:text-slate-200" />
               </a>
             </div>
-            <p className="text-xs text-slate-500">Network: Devnet</p>
+            <p className="text-xs text-slate-500">Network: Mainnet-Beta</p>
           </div>
         </div>
       )}

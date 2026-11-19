@@ -122,7 +122,7 @@ export default function MintProofOfAudit({
         </div>
 
         <a
-          href={`https://explorer.solana.com/tx/${txHash}?cluster=devnet`}
+          href={`https://explorer.solana.com/tx/${txHash}`}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 w-full py-2 rounded-lg bg-violet-500/20 text-violet-400 text-sm flex items-center justify-center gap-2 hover:bg-violet-500/30 transition"

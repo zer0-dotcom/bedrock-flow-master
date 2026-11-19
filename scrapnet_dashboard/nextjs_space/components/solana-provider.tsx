@@ -17,11 +17,17 @@ interface SolanaProviderProps {
 }
 
 export default function SolanaProvider({ children }: SolanaProviderProps) {
-  // Configure for Devnet by default
-  const network = WalletAdapterNetwork.Devnet;
-  
-  // Get the RPC endpoint for the selected network
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Network resolved from env; defaults to Mainnet unless explicitly 'devnet'
+  const network =
+    process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet'
+      ? WalletAdapterNetwork.Devnet
+      : WalletAdapterNetwork.Mainnet;
+
+  // Prefer an explicit RPC endpoint; fall back to the public cluster URL
+  const endpoint = useMemo(
+    () => process.env.NEXT_PUBLIC_RPC_ENDPOINT || clusterApiUrl(network),
+    [network]
+  );
   
   // Initialize wallet adapters (Phantom and Solflare are the most common)
   const wallets = useMemo(

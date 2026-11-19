@@ -227,7 +227,7 @@ export default function MintProofButton({
           </div>
           <div>
             <h4 className="font-semibold text-white">Proof Minted On-Chain!</h4>
-            <p className="text-sm text-emerald-400">Transaction confirmed on Solana Devnet</p>
+            <p className="text-sm text-emerald-400">Transaction confirmed on Solana Mainnet-Beta</p>
           </div>
         </div>
 
@@ -276,7 +276,7 @@ export default function MintProofButton({
 
         {/* Explorer Link */}
         <a
-          href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+          href={`https://explorer.solana.com/tx/${txSignature}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
@@ -331,7 +331,7 @@ export default function MintProofButton({
           </div>
           <div>
             <span className="text-slate-500">Network</span>
-            <p className="text-amber-400 font-medium">Devnet</p>
+            <p className="text-amber-400 font-medium">Mainnet-Beta</p>
           </div>
         </div>
       </div>

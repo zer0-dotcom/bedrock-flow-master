@@ -121,7 +121,7 @@ export default function SolanaProofsList({ userId }: SolanaProofsListProps) {
                       }
                     </button>
                     <a
-                      href={`https://explorer.solana.com/tx/${proof.transactionHash}?cluster=devnet`}
+                      href={`https://explorer.solana.com/tx/${proof.transactionHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 rounded hover:bg-gray-800 text-gray-500 hover:text-violet-400 transition"
