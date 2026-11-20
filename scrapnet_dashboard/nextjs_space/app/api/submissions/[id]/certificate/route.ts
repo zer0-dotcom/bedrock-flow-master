@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
 /**
  * SOVEREIGN CERTIFICATE GENERATOR
@@ -311,13 +312,47 @@ export async function POST(
   try {
     const { id } = await params;
 
-    const submission = await prisma.submission.findUnique({
-      where: { id },
-      include: { settlement: true },
-    });
+    // --- Access control: verify caller JWT (cookie or Bearer) ---
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+    }
+
+    const token =
+      request.cookies.get('auth-token')?.value ||
+      request.headers.get('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // --- Ownership scoping: ADMIN/FOUNDER bypass; otherwise own submissions only ---
+    const isPrivileged = decoded.role === 'ADMIN' || decoded.role === 'FOUNDER';
+
+    // Guard against malformed/empty claims before hitting Prisma
+    if (typeof decoded !== 'object' || decoded === null || (!isPrivileged && !decoded.userId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const submission = isPrivileged
+      ? await prisma.submission.findUnique({
+          where: { id },
+          include: { settlement: true },
+        })
+      : await prisma.submission.findFirst({
+          where: { id, submittedById: decoded.userId },
+          include: { settlement: true },
+        });
 
     if (!submission) {
-      return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
     const html = buildCertificateHtml(

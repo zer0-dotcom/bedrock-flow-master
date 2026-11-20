@@ -11,3 +11,6 @@ backups/
 node_modules/
 .next/
 dist/
+
+# Transient run-log folders
+.logs/
