@@ -124,6 +124,7 @@ function AvatarVideoSlot({ name, color }: { name: string; color: { border: strin
   const [hasError, setHasError] = useState(false)
   const [isTouch, setIsTouch] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
   const slug = (name ?? '').toLowerCase()
   const videoSrc = `/videos/${slug}.mp4`
@@ -165,7 +166,7 @@ function AvatarVideoSlot({ name, color }: { name: string; color: { border: strin
             src={videoSrc}
             poster={posterSrc}
             className="w-full h-full object-cover"
-            muted
+            muted={isMuted}
             loop
             playsInline
             preload="none"
@@ -176,6 +177,26 @@ function AvatarVideoSlot({ name, color }: { name: string; color: { border: strin
             onPointerLeave={(e) => { if (e.pointerType === 'mouse') stop() }}
             onClick={handleTap}
           />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              const v = videoRef.current
+              if (!v) return
+              const next = !isMuted
+              setIsMuted(next)
+              v.muted = next
+              if (!next) { v.play()?.catch(() => {}) }   // ensure playback when unmuting
+            }}
+            aria-label={isMuted ? `Unmute ${name}` : `Mute ${name}`}
+            className={`absolute bottom-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border ${color?.border ?? ''} bg-black/60 backdrop-blur-sm ${color?.text ?? 'text-white'}`}
+          >
+            {isMuted ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z" opacity=".4"/><path d="M19 12l3 3m0-6l-3 3" stroke="currentColor" strokeWidth="2" fill="none"/></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm11 .5a4.5 4.5 0 0 1 0 5M16.5 7a8 8 0 0 1 0 10"/></svg>
+            )}
+          </button>
           {isTouch && !isPlaying && (
             <button
               type="button"
