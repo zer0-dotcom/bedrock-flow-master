@@ -225,8 +225,7 @@ export default function SignupPage() {
 
         {/* Terms */}
         <p className="text-center mt-4 text-xs text-gray-500">
-          By creating an account, you agree to the GENIUS Act 2026 compliance framework
-          and the Universal Law (Dynamic BPS) distribution protocol.
+          By creating an account, you agree to the GENIUS Act 2026 compliance framework.
         </p>
       </div>
     </div>

@@ -3,7 +3,7 @@ import VaultCommunityContent from '@/components/vault-community-content';
 
 export const metadata: Metadata = {
   title: 'Community Credits | Bedrock ESG Sovereign Ledger',
-  description: 'View the public overflow distribution to communities in need.',
+  description: 'View community credit activity on the Bedrock ESG Sovereign Ledger.',
 };
 
 export default function VaultCommunityPage() {

@@ -18,7 +18,6 @@ import {
   VibrationalEquityInput,
   ParametricInsuranceInput,
 } from '@/lib/universal-law';
-import { getBpsTable } from '@/lib/bps-config';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -50,39 +49,11 @@ export async function GET(request: NextRequest) {
 
     switch (action) {
       case 'split': {
-        // DYNAMIC BPS — read the live operator-configured table. No hardcoded
-        // percentages: the label and every leg percentage derive from the
-        // runtime config (defaults safely to a valid 10,000-sum table).
-        const table = getBpsTable();
-        // SERIALIZE-SAFE VIEW ONLY: never expose the raw internal split table
-        // (per-leg `legs[]`, `customLegs`) or a slash-encoded split label to the
-        // client. Send only the derived percentages/BPS the UI cards read plus
-        // the sanitized display label.
-        const bpsTable = {
-          earnerBps: table.earnerBps,
-          nodeBps: table.nodeBps,
-          depinBps: table.depinBps,
-          totalBps: table.totalBps,
-          earnerPct: table.earnerPct,
-          nodePct: table.nodePct,
-          depinPct: table.depinPct,
-          label: table.label,
-        };
-        return NextResponse.json({
-          universalLaw: bpsTable.label,
-          contractConfig: { bpsTable },
-          bpsTable,
-          split: {
-            founderYield: bpsTable.earnerPct,
-            stewardship: bpsTable.nodePct,
-            publicResilience: bpsTable.depinPct,
-          },
-          description: {
-            verifiedAssetValue: 'Direct liquidity for the source of energy',
-            stewardship: 'Maintenance of Bedrock ESG/Unicon/Freality nodes',
-            publicResilience: 'Non-custodial routing to Household Resilience Grants',
-          },
-        });
+        // DECOMMISSIONED (Wave 1): the allocation-split view is no longer
+        // serialized to the client. No BPS table, per-leg percentages, or
+        // leg-split labels are exposed on any public route. The internal BPS
+        // engine and settlement math are untouched and remain server-side only.
+        return NextResponse.json({ action: 'split', ok: true });
       }
 
       case 'entries': {

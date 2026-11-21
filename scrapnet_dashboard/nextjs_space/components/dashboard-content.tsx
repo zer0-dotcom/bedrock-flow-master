@@ -173,7 +173,7 @@ export default function DashboardContent() {
                 </li>
                 <li>
                   • <span className="text-foreground font-medium">On-Chain Settlement Standard:</span> 100% Deterministic
-                  Dynamic BPS Distribution (Σ = 10,000)
+                  Settlement Finality
                 </li>
               </ul>
             </div>

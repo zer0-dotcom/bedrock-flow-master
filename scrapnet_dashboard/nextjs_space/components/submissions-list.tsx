@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { useBpsTable } from '@/lib/use-bps-table';
 import {
   Loader2,
   Brain,
@@ -79,7 +78,6 @@ const TRACK_LABELS: Record<string, string> = {
 };
 
 export default function SubmissionsList({ walletAddress }: { walletAddress: string }) {
-  const bpsTable = useBpsTable();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -343,26 +341,23 @@ export default function SubmissionsList({ walletAddress }: { walletAddress: stri
                   {sub.settlement && (
                     <div className="bg-[#111] rounded-lg p-3 border border-[#2a2a2a]">
                       <div className="text-[10px] text-gray-500 font-semibold mb-2 uppercase tracking-wider">
-                        {bpsTable ? bpsTable.label : 'DYNAMIC BPS'} SETTLEMENT — {sub.settlement.settlementId}
+                        SETTLEMENT — {sub.settlement.settlementId}
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="text-center p-2 bg-green-500/5 rounded border border-green-500/20">
-                          <div className="text-lg font-bold text-green-400">{bpsTable ? `${bpsTable.earnerPct}%` : '—'}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-lg font-bold text-green-400">
                             ${sub.settlement.assetOwnerShare.toFixed(2)}
                           </div>
                           <div className="text-[9px] text-gray-600">Asset Sovereign</div>
                         </div>
                         <div className="text-center p-2 bg-blue-500/5 rounded border border-blue-500/20">
-                          <div className="text-lg font-bold text-blue-400">{bpsTable ? `${bpsTable.nodePct}%` : '—'}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-lg font-bold text-blue-400">
                             ${sub.settlement.treasuryShare.toFixed(2)}
                           </div>
                           <div className="text-[9px] text-gray-600">Verification Node</div>
                         </div>
                         <div className="text-center p-2 bg-purple-500/5 rounded border border-purple-500/20">
-                          <div className="text-lg font-bold text-purple-400">{bpsTable ? `${bpsTable.depinPct}%` : '—'}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-lg font-bold text-purple-400">
                             ${sub.settlement.specialistShare.toFixed(2)}
                           </div>
                           <div className="text-[9px] text-gray-600">

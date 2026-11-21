@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { MapPin, Heart, DollarSign } from 'lucide-react';
-import { useBpsTable } from '@/lib/use-bps-table';
 
 interface ZipOverflow {
   zipCode: string;
@@ -35,7 +34,6 @@ export default function NeighborhoodHeartbeat({
   totalDistributed,
   className,
 }: NeighborhoodHeartbeatProps) {
-  const bpsTable = useBpsTable();
   const activeZips = useMemo(() => {
     return overflows.slice(0, 12).map((o) => ({
       ...o,
@@ -61,7 +59,7 @@ export default function NeighborhoodHeartbeat({
             </div>
             <span className="text-sm font-semibold text-gray-300">Regional Distribution</span>
           </div>
-          <div className="text-xs text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Public Resilience</div>
+          <div className="text-xs text-gray-500">Public Resilience</div>
         </div>
 
         {/* Map visualization */}

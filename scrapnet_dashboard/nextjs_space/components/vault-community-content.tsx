@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { useBpsTable } from '@/lib/use-bps-table';
 import VaultSidebar from './vault-sidebar';
 import {
   Users, Loader2, ChevronLeft, Lock, Shield, Heart,
@@ -13,7 +12,6 @@ import {
 
 export default function VaultCommunityContent() {
   const router = useRouter();
-  const bpsTable = useBpsTable();
   const [loading, setLoading] = useState(true);
   const [communityData, setCommunityData] = useState<{
     totalOverflow: number;
@@ -107,7 +105,7 @@ export default function VaultCommunityContent() {
                   <Users className="w-5 h-5 text-amber-400" />
                   Community Credits
                 </h1>
-                <p className="text-sm text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Public Resilience</p>
+                <p className="text-sm text-gray-500">Public Resilience</p>
               </div>
             </div>
           </div>
@@ -183,7 +181,7 @@ export default function VaultCommunityContent() {
             <Shield className="w-6 h-6 text-emerald-400 flex-shrink-0" />
             <div>
               <p className="text-sm text-white">Universal Law Enforced</p>
-              <p className="text-xs text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : 'A configurable share '}of all settlements automatically routes to Public Resilience, supporting communities with the highest carbon burden.</p>
+              <p className="text-xs text-gray-500">A configurable share of all settlements automatically routes to Public Resilience, supporting communities with the highest carbon burden.</p>
             </div>
           </div>
         </div>

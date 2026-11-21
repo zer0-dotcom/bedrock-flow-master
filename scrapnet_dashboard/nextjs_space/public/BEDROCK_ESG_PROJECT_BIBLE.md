@@ -120,7 +120,7 @@ Bedrock ESG consists of **7 major modules**:
 - **Workflow:**
   1. Business submits documents (drag-and-drop, multi-track: Carbon, Water, Energy, Waste, Social)
   2. AI Forensic Parser analyzes documents via LLM API
-  3. Settlement Engine applies **70/20/10 split** (70% Platform Credit, 20% Submitter Incentive, 10% Community Reserve)
+  3. Settlement Engine distributes settled value across Platform Credit, Submitter Incentive, and Community Reserve
   4. Sovereign Certificate PDF generated with Solana attestation
 - **Database Models:**
   - `Submission` — company info, status, AI analysis results, settlement data
@@ -130,7 +130,7 @@ Bedrock ESG consists of **7 major modules**:
   - `GET/POST /api/submissions` — list/create submissions
   - `GET/DELETE /api/submissions/[id]` — single submission
   - `POST /api/submissions/[id]/parse` — trigger AI forensic analysis
-  - `POST /api/submissions/[id]/settle` — execute 70/20/10 settlement
+  - `POST /api/submissions/[id]/settle` — execute settlement
   - `POST /api/submissions/[id]/certificate` — generate Sovereign Certificate PDF
   - `POST /api/upload` — S3 presigned URL generation
 
@@ -250,7 +250,7 @@ Bedrock ESG consists of **7 major modules**:
 #### Submission Portal
 - `Submission` — business submissions (companyName, track, status, AI analysis, settlement data)
 - `SubmissionDocument` — uploaded documents (fileName, fileSize, cloudStoragePath)
-- `Settlement` — 70/20/10 settlement records
+- `Settlement` — settlement records
 
 #### Blockchain
 - `SolanaAuditProof` — on-chain proof records
@@ -421,11 +421,10 @@ transport_factor = distance_km × transport_emission_rate
 biogenic_correction = 0.60 (applied to biochar-origin materials)
 ```
 
-### Settlement Split (Submission Portal)
+### Settlement (Submission Portal)
 ```
-Platform Credit:      70% of verified amount
-Submitter Incentive:  20% of verified amount  
-Community Reserve:    10% of verified amount
+Verified amount is distributed across Platform Credit, Submitter
+Incentive, and Community Reserve by the Smart Settlement Engine.
 ```
 
 ### HUM Baseline

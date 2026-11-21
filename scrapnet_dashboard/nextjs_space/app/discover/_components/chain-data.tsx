@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
-import { BpsChart } from './bps-chart'
 
 const stats = [
   { label: 'First Client Proof', value: '$158.24', sub: '1.86t CO₂', icon: '◈' },
@@ -65,36 +64,8 @@ export function ChainData() {
           ))}
         </div>
 
-        {/* Two-column layout: BPS chart + badges/info */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* BPS Split Chart */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 backdrop-blur-sm"
-          >
-            <h3 className="font-display text-lg font-bold text-white mb-1">BPS Split</h3>
-            <p className="text-xs text-gray-500 font-mono mb-4">Basis-Point Sovereign Equity Distribution</p>
-
-            <BpsChart />
-
-            <div className="grid grid-cols-3 gap-3 mt-4">
-              <div className="text-center">
-                <div className="text-emerald-400 font-mono font-bold text-lg">70%</div>
-                <div className="text-xs text-gray-500">Sovereign</div>
-              </div>
-              <div className="text-center">
-                <div className="text-purple-400 font-mono font-bold text-lg">20%</div>
-                <div className="text-xs text-gray-500">Verification</div>
-              </div>
-              <div className="text-center">
-                <div className="text-cyan-400 font-mono font-bold text-lg">10%</div>
-                <div className="text-xs text-gray-500">Community</div>
-              </div>
-            </div>
-          </motion.div>
-
+        {/* On-chain attestation */}
+        <div className="grid grid-cols-1 gap-8">
           {/* On-chain info + badges */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}

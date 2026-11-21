@@ -54,7 +54,7 @@ The Biochar CDR Calculator provides institutional-grade verification of Carbon D
 ---
 
 ### **Verification Vault**
-Your Verification Vault serves as your institutional dashboard, displaying all verified contributions and their economic value under the Universal Law (70/20/10 distribution).
+Your Verification Vault serves as your institutional dashboard, displaying all verified contributions and their economic value.
 
 **How to use it:**
 - Access via **Vault** in the sidebar
@@ -97,12 +97,6 @@ Verification agents play a critical role in validating environmental contributio
 ### **Q: Can I export verification data for compliance reporting?**
 **A:** Yes. Navigate to **Biochar** → **Batches** and select **Export**. Individual batch certificates or bulk records can be downloaded as JSON files compatible with the Hedera Guardian Framework for institutional compliance.
 
-### **Q: What is the 70/20/10 distribution I see in my vault?**
-**A:** This is the **Universal Law** governing value distribution:  
-- **70%** is allocated to the Contributor (Founder Yield)  
-- **20%** supports Stewardship Initiatives (Debt-Erasure programs)  
-- **10%** funds Public Resilience (community infrastructure)
-
 ### **Q: How do I connect my verification wallet?**
 **A:** In the **Verification Vault**, select **Connect Wallet**. Your browser extension (Phantom, Solflare, etc.) will prompt for connection approval. Once confirmed, your wallet address links to your account for generating attestations.
 
@@ -132,7 +126,7 @@ Verification agents play a critical role in validating environmental contributio
 - **Biochar:** A carbon-stable material produced by processing organic matter (feedstock) in a controlled, low-oxygen environment.
 - **Pyrolysis Temperature:** The processing temperature used during biochar production; higher temperatures typically produce more stable carbon.
 - **Attestation:** A verified, immutable record of environmental contribution stored on a blockchain ledger.
-- **Universal Law:** The 70/20/10 value distribution framework governing all settlements within Bedrock ESG.
+- **Universal Law:** The value distribution framework governing all settlements within Bedrock ESG.
 - **Verification Agent:** An authorized professional responsible for reviewing and certifying environmental contributions.
 
 ---

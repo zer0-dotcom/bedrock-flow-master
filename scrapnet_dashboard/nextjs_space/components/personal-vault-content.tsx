@@ -12,7 +12,6 @@ import MintProofOfAudit from './mint-proof-of-audit';
 import MintProofButton from '@/components/mint-proof-button';
 import SolanaProofsList from './solana-proofs-list';
 import WalletConnectButton from './wallet-connect-button';
-import { useBpsTable } from '@/lib/use-bps-table';
 import {
   Zap, TrendingUp, History, Wallet, Shield, ChevronRight,
   Loader2, AlertCircle, Activity, Clock, CheckCircle2, XCircle,
@@ -99,7 +98,6 @@ export default function PersonalVaultContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const bpsTable = useBpsTable();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchVaultData = async () => {
@@ -381,7 +379,7 @@ export default function PersonalVaultContent() {
                 <span className="text-xs text-gray-500">Asset Sovereign</span>
               </div>
               <p className="text-xl font-bold text-white">${metrics.ledgerEquity.toFixed(2)}</p>
-              <p className="text-xs text-cyan-400">{bpsTable ? `${bpsTable.earnerPct}% ` : ''}Asset Sovereign</p>
+              <p className="text-xs text-cyan-400">Asset Sovereign</p>
             </div>
             <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -389,7 +387,7 @@ export default function PersonalVaultContent() {
                 <span className="text-xs text-gray-500">Community</span>
               </div>
               <p className="text-xl font-bold text-white">${metrics.publicOverflow.toFixed(2)}</p>
-              <p className="text-xs text-amber-400">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Public Resilience</p>
+              <p className="text-xs text-amber-400">Public Resilience</p>
             </div>
             <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 p-4">
               <div className="flex items-center gap-2 mb-2">

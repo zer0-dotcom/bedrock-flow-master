@@ -24,7 +24,7 @@ Bedrock ESG addresses this by providing:
 - **Automated verification** — AI-powered forensic analysis of submitted environmental documents, eliminating the bottleneck of manual review
 - **Immutable proof** — every verified claim is written to the Solana blockchain as a permanent, tamper-proof record
 - **Institutional compliance** — calculations follow ISO 14040 (Life Cycle Assessment), ISO 14064-2 (GHG quantification), and are built on the ICE v4.1 and Ecoinvent v3.10.1 emission factor databases
-- **Fair value distribution** — a transparent 70/20/10 settlement model ensures platform sustainability, submitter incentives, and community reserves
+- **Fair value distribution** — a transparent settlement model ensures platform sustainability, submitter incentives, and community reserves
 
 ---
 
@@ -84,13 +84,7 @@ The primary intake mechanism for corporate environmental data. Businesses submit
 
 Once submitted, documents undergo AI Forensic Analysis — a large language model examines each document to extract environmental claims, verify data consistency, identify red flags, and calculate verified carbon impact.
 
-Verified submissions proceed through the **Smart Settlement Engine**, which applies the 70/20/10 value distribution:
-
-| Share | Recipient | Purpose |
-|-------|-----------|----------|
-| 70% | Platform Credit | Reinvested into platform operations and environmental infrastructure |
-| 20% | Submitter Incentive | Direct value returned to the submitting business |
-| 10% | Community Reserve | Allocated to public resilience and community environmental programs |
+Verified submissions proceed through the **Smart Settlement Engine**, which calculates and distributes the settled value across platform operations, submitter incentives, and community reserves.
 
 Settled submissions receive a **Sovereign Certificate** — a professionally formatted PDF document containing the full verification record, settlement details, and Solana blockchain attestation proof.
 
@@ -235,7 +229,7 @@ This is not a consumer app — it's a sovereign verification instrument designed
 | Three-chain architecture | Solana (attestation) + Hedera (consensus) + Polygon (tradeable assets) |
 | AI forensic analysis | Large language model reviews submitted documents for accuracy and fraud detection |
 | Institutional emission databases | ICE v4.1 + Ecoinvent v3.10.1 — the same databases used by academic and regulatory bodies |
-| Transparent settlement | 70/20/10 split visible to all parties |
+| Transparent settlement | Settlement records visible to all parties |
 | Multi-sector coverage | Asphalt, biochar, metals — the industries doing the real work of decarbonization |
 | Sovereign identity | Single cryptographic identity (Aethexer Sentinel) for all platform operations |
 | Token-native | EXITZ carbon displacement tokens built on Solana Token-2022 standard |
@@ -252,7 +246,7 @@ The platform operates as an integrated verification engine:
 3. **Calculations run** against institutional emission factor databases (ICE v4.1, Ecoinvent v3.10.1)
 4. **Blockchain attests** every verified result on Solana, with optional Hedera consensus logging
 5. **Credits issue** as tradeable ERC-1155 tokens on Polygon or EXITZ tokens on Solana
-6. **Settlement distributes** value through the 70/20/10 model
+6. **Settlement distributes** value through the Smart Settlement Engine
 7. **The Universal Ledger records** everything in one auditable, cross-chain accounting system
 
 This end-to-end pipeline means that a piece of raw environmental data — a biochar pyrolysis batch, a metal recovery log, an asphalt mix design — can enter the platform and emerge as a verified, blockchain-attested, tradeable digital asset, with full provenance from source to credit.

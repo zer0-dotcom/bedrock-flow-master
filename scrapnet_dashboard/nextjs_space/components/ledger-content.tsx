@@ -18,7 +18,6 @@ import {
   Radio,
   Users,
   Globe,
-  Flame,
   ArrowRight,
   Leaf,
   Clock,
@@ -74,18 +73,6 @@ interface LedgerStats {
     highFriction: number;
     complianceRate: number;
   };
-}
-
-// Live BPS table shape returned by /api/ledger?action=split (contractConfig).
-interface BpsTableView {
-  earnerBps: number;
-  nodeBps: number;
-  depinBps: number;
-  earnerPct: number;
-  nodePct: number;
-  depinPct: number;
-  label: string;
-  customLegs?: { name: string; bps: number }[];
 }
 
 interface LedgerEntry {
@@ -154,18 +141,15 @@ export default function LedgerContent() {
   const [hoveredPulse, setHoveredPulse] = useState<PulseEntry | null>(null);
   const [settlementVelocity, setSettlementVelocity] = useState(2.5);
   const [settlementLatency, setSettlementLatency] = useState(150);
-  // Live operator-configured BPS table (no hardcoded ratio in the UI).
-  const [bpsTable, setBpsTable] = useState<BpsTableView | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, entriesRes, complianceRes, v2StatsRes, pulseRes, splitRes] = await Promise.all([
+      const [statsRes, entriesRes, complianceRes, v2StatsRes, pulseRes] = await Promise.all([
         fetch('/api/ledger?action=stats'),
         fetch('/api/ledger?action=entries&limit=20'),
         fetch('/api/ledger?action=compliance'),
         fetch('/api/ledger?action=v2-stats'),
         fetch('/api/ledger?action=pulse-strings&limit=20'),
-        fetch('/api/ledger?action=split'),
       ]);
 
       const statsData = await statsRes.json();
@@ -173,14 +157,12 @@ export default function LedgerContent() {
       const complianceData = await complianceRes.json();
       const v2StatsData = await v2StatsRes.json();
       const pulseData = await pulseRes.json();
-      const splitData = await splitRes.json();
 
       setStats(statsData);
       setEntries(entriesData.entries || []);
       setHighFrictionEntries(complianceData.highFrictionEntries || []);
       setV2Stats(v2StatsData);
       setPulseStrings(pulseData.pulses || []);
-      if (splitData?.bpsTable) setBpsTable(splitData.bpsTable as BpsTableView);
 
       // Simulate velocity/latency updates
       setSettlementVelocity(Math.random() * 8 + 1);
@@ -368,53 +350,6 @@ export default function LedgerContent() {
       {/* Living Organism Overview */}
       {activeTab === 'organism' && stats && (
         <div className="space-y-6">
-          {/* Forensic Discovery & Yield Telemetry Banner - Sovereign Style */}
-          <div className="relative bg-gradient-to-r from-[hsl(225,25%,8%)] via-[hsl(225,25%,10%)] to-[hsl(225,25%,8%)] rounded-xl p-6 border border-cyan-500/20 overflow-hidden">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMjIiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTR2Mkgy0di0yaDEyem0wLTR2Mkgy0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-20" />
-            <div className="relative flex items-center gap-4 mb-6">
-              <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-amber-500/20 rounded-xl border border-cyan-500/30">
-                <Flame className="w-8 h-8 text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-amber-400 bg-clip-text text-transparent">
-                  Forensic Discovery & Yield Telemetry
-                </h2>
-                <p className="text-gray-500 text-sm">
-                  Continuous Ingestion · Real-Time Scope 3 Valuation & Autonomous Settlement
-                </p>
-              </div>
-            </div>
-            <div className="relative grid grid-cols-3 gap-4">
-              <div className="pentagon-card p-4 border-emerald-500/40">
-                <div className="text-4xl font-bold text-emerald-400">{bpsTable ? `${bpsTable.earnerPct}%` : '—'}</div>
-                <div className="text-sm font-medium text-emerald-300 mt-1">Discovered Asset Value</div>
-                <div className="text-xs text-gray-500 mt-2">Net capital unlocked via continuous thermodynamic remediation</div>
-                <div className="text-xs text-emerald-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>
-                <div className="text-lg font-semibold text-white">
-                  ${stats.universalLedger.founderYieldUsd.toLocaleString()}
-                </div>
-              </div>
-              <div className="pentagon-card p-4 border-amber-500/40">
-                <div className="text-4xl font-bold text-amber-400">{bpsTable ? `${bpsTable.nodePct}%` : '—'}</div>
-                <div className="text-sm font-medium text-amber-300 mt-1">Telemetry Proof Sentinel</div>
-                <div className="text-xs text-gray-500 mt-2">Real-time invariant attestation & Token-2022 circuit validation</div>
-                <div className="text-xs text-amber-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>
-                <div className="text-lg font-semibold text-white">
-                  ${stats.universalLedger.stewardshipUsd.toLocaleString()}
-                </div>
-              </div>
-              <div className="pentagon-card p-4 border-cyan-500/40">
-                <div className="text-4xl font-bold text-cyan-400">{bpsTable ? `${bpsTable.depinPct}%` : '—'}</div>
-                <div className="text-sm font-medium text-cyan-300 mt-1">Civic Carbon Abatement</div>
-                <div className="text-xs text-gray-500 mt-2">Non-custodial routing to Civic Carbon Abatement</div>
-                <div className="text-xs text-cyan-400/70 mt-2 uppercase tracking-wide">Carbon Valuation</div>
-                <div className="text-lg font-semibold text-white">
-                  ${stats.universalLedger.publicResilienceUsd.toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Main Grid: Pentagon + Stats */}
           <div className="grid grid-cols-2 gap-6">
             {/* Sovereign Pentagon */}
@@ -554,11 +489,11 @@ export default function LedgerContent() {
                   <div className="text-emerald-400 font-semibold">ACTIVE</div>
                 </div>
                 <div className="bg-[hsl(225,25%,10%)] rounded-lg p-4">
-                  <div className="text-gray-500">{bpsTable ? `${bpsTable.earnerPct}% ` : ''}Discovered Asset Value</div>
+                  <div className="text-gray-500">Discovered Asset Value</div>
                   <div className="text-white font-semibold">Flowing</div>
                 </div>
                 <div className="bg-[hsl(225,25%,10%)] rounded-lg p-4">
-                  <div className="text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Civic Carbon Abatement</div>
+                  <div className="text-gray-500">Civic Carbon Abatement</div>
                   <div className="text-cyan-400 font-semibold">Distributed</div>
                 </div>
               </div>
@@ -600,7 +535,7 @@ export default function LedgerContent() {
                     <div className="text-emerald-400">${hoveredPulse.totalValueUsd.toLocaleString()}</div>
                   </div>
                   <div>
-                    <div className="text-gray-500">{bpsTable ? `${bpsTable.depinPct}% ` : ''}Civic Carbon Abatement</div>
+                    <div className="text-gray-500">Civic Carbon Abatement</div>
                     <div className="text-cyan-400">${hoveredPulse.publicResilienceUsd?.toLocaleString() || '—'}</div>
                   </div>
                   <div>
@@ -685,7 +620,7 @@ export default function LedgerContent() {
               <h3 className="text-lg font-semibold text-white">Zero Greed Policy</h3>
             </div>
             <p className="text-gray-400 text-sm">
-              If any transaction attempts to bypass the configured Civic Carbon Abatement allocation{bpsTable ? ` (${bpsTable.depinPct}%)` : ''} it is immediately
+              If any transaction attempts to bypass the configured Civic Carbon Abatement allocation it is immediately
               flagged as &ldquo;HIGH-FRICTION&rdquo; and settlement is blocked until the Σ = 10,000 BPS floor is restored.
             </p>
           </div>
