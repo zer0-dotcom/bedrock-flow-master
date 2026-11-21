@@ -10,7 +10,7 @@ This specification defines the integration of the **Roofing Industry Vertical** 
 
 The core innovation is the **Thermal Load Shedding (TLS)** calculation — a methodology that quantifies the kWh reduction in HVAC demand achieved by high-performance cool roofing systems, converts that reduction into verifiable CO₂e savings, and anchors the proof to Solana via the existing Sovereign Notary.
 
-> **Note:** This vertical does NOT introduce a new token. Verified roofing assets flow through the existing EXITZ tokenization pipeline and the 70/20/10 settlement split.
+> **Note:** This vertical does NOT introduce a new token. Verified roofing assets flow through the existing EXITZ tokenization pipeline and the standard discovery settlement framework.
 
 ---
 
@@ -188,13 +188,15 @@ After the Genesis Block, monthly TLS calculations are anchored as `ROOFING_TLS_R
 
 ## 6. Settlement Integration
 
-Roofing settlements use the existing 70/20/10 split with no modifications:
+Roofing settlements use the existing discovery settlement framework with no modifications. Each verified roofing asset routes proceeds across the same participant roles as every other Bedrock vertical:
 
-| Share | Recipient | Roofing Context |
-|---|---|---|
-| **70%** | Asset Owner | Building owner or roofing company |
-| **20%** | Bedrock Treasury | Platform backing / institutional reserve |
-| **10%** | Specialist | Verification agent who confirmed installation |
+| Participant | Roofing Context |
+|---|---|
+| Asset Owner | Building owner or roofing company |
+| Bedrock Treasury | Platform backing / institutional reserve |
+| Specialist | Verification agent who confirmed installation |
+
+Share parameters are governed server-side by the settlement engine and are not published in vertical specifications.
 
 Settlement is triggered when:
 1. Material registration is complete with spectral test data
