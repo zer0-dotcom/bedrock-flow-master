@@ -349,11 +349,11 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Verification Repository Section - Certified Operators Only */}
+        {/* Verification Repository Section - Tier 5 Protocol Operators Only */}
         {hasService('VAULT') && (
           <div>
-            <h3 className="px-4 text-xs font-semibold uppercase tracking-wider text-violet-400/60 mb-2 flex items-center gap-2">
-              <Shield className="h-3 w-3" /> Verification (Certified)
+            <h3 className="px-4 text-xs font-semibold uppercase tracking-wider text-violet-400/60 mb-2 flex items-center gap-2" title="Bedrock ESG Internal dMRV Standard">
+              <Shield className="h-3 w-3" /> Verification (Tier 5 Protocol)
             </h3>
             <div className="space-y-1">
               {vaultNavItems.map((item) => {
@@ -464,9 +464,9 @@ export default function Sidebar() {
           </div>
         )}
         {hasService('VAULT') && (
-          <div className="rounded-lg bg-violet-500/10 p-2">
-            <p className="text-xs font-semibold text-violet-300">Verification Node</p>
-            <p className="text-xs text-violet-300/80">Level 5 Certified</p>
+          <div className="rounded-lg bg-violet-500/10 p-2" title="Bedrock ESG Internal dMRV Standard">
+            <p className="text-xs font-semibold text-violet-300">Verification Node — Tier 5 Protocol</p>
+            <p className="text-xs text-violet-300/80">Bedrock ESG Internal dMRV Standard</p>
           </div>
         )}
         {hasService('IMPACT') && (

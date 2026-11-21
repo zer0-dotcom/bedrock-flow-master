@@ -136,7 +136,7 @@ export default function DashboardContent() {
               <h4 className="font-medium text-emerald-600 dark:text-emerald-400">Core Capabilities</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  • <span className="text-foreground font-medium">Multi-Material Scope 3 Forensic Ledger:</span> Certified
+                  • <span className="text-foreground font-medium">Multi-Material Scope 3 Forensic Ledger:</span> Standards-aligned
                   LCA modeling across 9 industrial categories (Construction, Metals, Plastics, Biochar, Paper, Glass,
                   Electronics, Textiles, Rubber) with 40+ active emission factors grounded in ASHRAE 90.1, ICE v4.1, and
                   Ecoinvent v3.10.1 coefficients with live eGRID grid factors. Zero synthetic carbon data.

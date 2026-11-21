@@ -37,7 +37,7 @@ export default function HomePage() {
             </div>
             <div className="rounded-lg bg-zinc-800/80 px-4 py-3 backdrop-blur-sm border border-amber-500/30">
               <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">Biochar</p>
-              <p className="text-lg font-bold text-white">CDR Certification</p>
+              <p className="text-lg font-bold text-white">CDR Verification</p>
             </div>
             <div className="rounded-lg bg-zinc-800/80 px-4 py-3 backdrop-blur-sm border border-cyan-500/30">
               <p className="text-xs text-cyan-400 font-semibold uppercase tracking-wider">Metal</p>

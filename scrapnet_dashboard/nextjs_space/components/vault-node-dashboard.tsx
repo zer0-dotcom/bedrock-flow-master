@@ -277,8 +277,9 @@ export default function VaultNodeDashboard() {
           </div>
           <h2 className="text-2xl font-bold text-white">Access Restricted</h2>
           <p className="text-muted-foreground">
-            This section is restricted to Certified Vault Node operators only.
-            Banks, vaults, and certified processors with valid credentials may access this area.
+            This section is restricted to Tier 5 Protocol Vault Node operators only.
+            Banks, vaults, and registered processors with valid credentials may access this area.
+            <span className="block mt-1 text-xs text-muted-foreground/70">Bedrock ESG Internal dMRV Standard</span>
           </p>
           <div className="pt-4">
             <a
@@ -286,7 +287,7 @@ export default function VaultNodeDashboard() {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium transition-colors"
             >
               <Shield className="h-5 w-5" />
-              Request Certification
+              Request Node Enrollment
             </a>
           </div>
         </div>
@@ -310,9 +311,9 @@ export default function VaultNodeDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
+          <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2" title="Bedrock ESG Internal dMRV Standard">
             <CheckCircle2 className="h-4 w-4" />
-            Certified Node Active
+            Tier 5 Protocol Node Active
           </div>
         </div>
       </div>
@@ -329,7 +330,7 @@ export default function VaultNodeDashboard() {
             <p className="text-sm text-white">{DEMO_VAULT_NODE.name}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Certification</p>
+            <p className="text-xs text-muted-foreground" title="Bedrock ESG Internal dMRV Standard">Protocol ID</p>
             <p className="text-sm text-white">{DEMO_VAULT_NODE.certificationNumber}</p>
           </div>
           <div>

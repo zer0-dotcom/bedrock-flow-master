@@ -328,7 +328,7 @@ export default function PublicCalculator() {
           </h3>
           <p className="text-slate-400 max-w-md mx-auto">
             Join Bedrock ESG to mint your verified recycling data as <strong className="text-emerald-400">Carbon Credits</strong> on the blockchain.
-            Get certified, earn credits, and contribute to a sustainable future.
+            Get verified, earn credits, and contribute to a sustainable future.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link

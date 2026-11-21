@@ -265,7 +265,7 @@ export default function GlobalLedgerContent() {
             
             <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-8">
               Real-time transparency into verified currency destruction, carbon credits, 
-              and the global network of certified vault nodes.
+              and the global network of verified vault nodes.
             </p>
 
             <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
@@ -394,7 +394,7 @@ export default function GlobalLedgerContent() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white">Global Node Network</h2>
-            <p className="text-slate-400 text-sm">Active certified vault nodes worldwide</p>
+            <p className="text-slate-400 text-sm">Active verified vault nodes worldwide</p>
           </div>
         </div>
 
@@ -510,7 +510,7 @@ export default function GlobalLedgerContent() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span className="text-xs text-white">Certified Processor</span>
+                <span className="text-xs text-white" title="Bedrock ESG Internal dMRV Standard">Tier 5 Protocol Processor</span>
               </div>
             </div>
           </div>
@@ -937,14 +937,14 @@ export default function GlobalLedgerContent() {
               Join the Global Network
             </h2>
             <p className="text-slate-300 max-w-2xl mx-auto mb-8">
-              Become a certified vault node and participate in the future of secure currency 
+              Become a verified vault node and participate in the future of secure currency 
               digitization. Earn carbon credits while ensuring global financial security.
             </p>
             <Link
               href="/signup/agent"
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold rounded-xl transition-all"
             >
-              Apply for Certification
+              Apply for Node Enrollment
               <ExternalLink className="h-5 w-5" />
             </Link>
           </div>
