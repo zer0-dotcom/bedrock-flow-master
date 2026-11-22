@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import StreamingAvatar, {
   AvatarQuality,
   StreamingEvents,
   TaskType,
   VoiceEmotion,
-} from "./heygen-stub";
+} from "@heygen/streaming-avatar";
 
 export default function InteractiveAvatarModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,11 +14,32 @@ export default function InteractiveAvatarModal() {
   const [streamActive, setStreamActive] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [statusLog, setStatusLog] = useState("Standing by");
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const avatarInstance = useRef<StreamingAvatar | null>(null);
+  const streamActiveRef = useRef(false);
+  const closingRef = useRef(false);
+
+  // Keep a ref mirror of stream state so the unmount cleanup reads the latest value.
+  useEffect(() => {
+    streamActiveRef.current = streamActive;
+  }, [streamActive]);
+
+  // Lifecycle cleanup: tear down any live avatar session when the component unmounts.
+  useEffect(() => {
+    return () => {
+      closingRef.current = true;
+      if (avatarInstance.current && streamActiveRef.current) {
+        avatarInstance.current.stopAvatar().catch(() => {});
+        avatarInstance.current = null;
+      }
+    };
+  }, []);
 
   const startSession = async () => {
+    closingRef.current = false;
+    setSessionError(null);
     setIsInitializing(true);
     setStatusLog("Negotiating cryptographic handshake...");
 
@@ -30,27 +51,34 @@ export default function InteractiveAvatarModal() {
       const avatar = new StreamingAvatar({ token });
       avatarInstance.current = avatar;
 
-// @ts-ignore
+      // @ts-ignore
       avatar.on(StreamingEvents.STREAM_READY, (event) => {
         setStatusLog("Signal verified // Stream online");
         setStreamActive(true);
-        if (videoRef.current && event.detail) {
+        if (videoRef.current && event?.detail) {
           videoRef.current.srcObject = event.detail;
           videoRef.current.play().catch(console.error);
         }
       });
 
+      // Session end / token expiry: HeyGen access tokens are one-time-use; when the
+      // session or token lapses the SDK emits STREAM_DISCONNECTED.
       avatar.on(StreamingEvents.STREAM_DISCONNECTED, () => {
-        setStatusLog("Stream terminated");
+        avatarInstance.current = null;
         setStreamActive(false);
+        if (closingRef.current) return; // intentional terminate — suppress error surface
+        setStatusLog("Session expired — please restart.");
+        setSessionError("Session expired — please restart.");
       });
 
       setStatusLog("Spawning Zer0 neural engine...");
       await avatar.createStartAvatar({
-        quality: AvatarQuality.Medium,
-        avatarName: process.env.NEXT_PUBLIC_HEYGEN_AVATAR_ID || "",
+        quality: AvatarQuality.High,
+        avatarName: process.env.NEXT_PUBLIC_HEYGEN_AVATAR_ID ?? "",
         voice: {
-          voiceId: process.env.NEXT_PUBLIC_HEYGEN_VOICE_ID || "21m00Tcm4TlvDq8ikWAM",
+          voiceId:
+            process.env.NEXT_PUBLIC_HEYGEN_VOICE_ID ??
+            "d053146f285a44d4ba5e378039e3f279",
           rate: 1.0,
           emotion: VoiceEmotion.EXCITED,
         },
@@ -58,18 +86,39 @@ export default function InteractiveAvatarModal() {
     } catch (err: any) {
       console.error("Live streaming connection failed:", err);
       setStatusLog("Connection failed. Check server credentials.");
+      setSessionError("Connection failed. Check server credentials.");
+      if (avatarInstance.current) {
+        try {
+          await avatarInstance.current.stopAvatar();
+        } catch {
+          /* no-op: instance may be only partially initialized */
+        }
+        avatarInstance.current = null;
+      }
+      setStreamActive(false);
     } finally {
       setIsInitializing(false);
     }
   };
 
   const terminateSession = async () => {
+    closingRef.current = true;
     if (avatarInstance.current) {
-      await avatarInstance.current.stopAvatar();
+      try {
+        await avatarInstance.current.stopAvatar();
+      } catch {
+        /* no-op */
+      }
       avatarInstance.current = null;
     }
     setStreamActive(false);
+    setSessionError(null);
     setIsOpen(false);
+  };
+
+  const handleRetry = () => {
+    setSessionError(null);
+    if (!streamActive) startSession();
   };
 
   const handleSpeak = async (e: React.FormEvent) => {
@@ -80,10 +129,15 @@ export default function InteractiveAvatarModal() {
     setInputMessage("");
     setStatusLog("Transmitting instruction...");
 
-    await avatarInstance.current.speak({
-      text: message,
-      taskType: TaskType.TALK,
-    });
+    try {
+      await avatarInstance.current.speak({
+        text: message,
+        taskType: TaskType.TALK,
+      });
+    } catch (err) {
+      console.error("Speak failed:", err);
+      setStatusLog("Transmission failed. Stream may have expired.");
+    }
   };
 
   return (
@@ -117,11 +171,23 @@ export default function InteractiveAvatarModal() {
           </div>
 
           <div className="relative w-full aspect-video bg-black flex items-center justify-center border-b border-cyan-500/20">
-            {(!streamActive || isInitializing) && (
-              <div className="flex flex-col items-center gap-3 p-6 text-center text-cyan-400 text-xs">
-                <span className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
-                <span className="font-mono text-[11px] tracking-wide">{statusLog}</span>
+            {sessionError ? (
+              <div className="flex flex-col items-center gap-3 p-6 text-center text-amber-400 text-xs">
+                <span className="font-mono text-[11px] tracking-wide">{sessionError}</span>
+                <button
+                  onClick={handleRetry}
+                  className="bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-cyan-500/40 transition cursor-pointer"
+                >
+                  Retry
+                </button>
               </div>
+            ) : (
+              (!streamActive || isInitializing) && (
+                <div className="flex flex-col items-center gap-3 p-6 text-center text-cyan-400 text-xs">
+                  <span className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
+                  <span className="font-mono text-[11px] tracking-wide">{statusLog}</span>
+                </div>
+              )
             )}
             <video
               ref={videoRef}

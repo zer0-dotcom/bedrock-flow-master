@@ -1,6 +1,9 @@
 # Ignore workspace media/screenshot assets
 Uploads/
 
+# Secure corporate intake upload storage
+.uploads/
+
 # Ignore local database backups
 backups/
 *.sql
