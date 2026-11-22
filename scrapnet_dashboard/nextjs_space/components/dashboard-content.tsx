@@ -173,9 +173,12 @@ export default function DashboardContent() {
                 </li>
                 <li>
                   • <span className="text-foreground font-medium">On-Chain Settlement Standard:</span> 100% Deterministic
-                  Settlement Finality
+                  Settlement Finality<sup>¹</sup>
                 </li>
               </ul>
+              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                ¹ Applies to audited submissions processed under the Bedrock Internal dMRV Standard. Results reflect verified facility data only.
+              </p>
             </div>
           </div>
 

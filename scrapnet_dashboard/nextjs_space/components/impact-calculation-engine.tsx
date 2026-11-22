@@ -109,7 +109,7 @@ export default function ImpactCalculationEngine() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 rounded-lg bg-[#1a1a1a]">
               <p className="text-2xl font-bold text-emerald-400">{impactResult.carbonSavedTonnes.toFixed(4)}</p>
               <p className="text-xs text-gray-500">Tonnes CO₂e</p>
@@ -118,20 +118,35 @@ export default function ImpactCalculationEngine() {
               <p className="text-2xl font-bold text-cyan-400">${impactResult.valueUsd.toFixed(2)}</p>
               <p className="text-xs text-gray-500">Total Value</p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-[#1a1a1a]">
-              <p className="text-2xl font-bold text-violet-400">${impactResult.founderYield70.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Asset Sovereign</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-[#1a1a1a]">
-              <p className="text-2xl font-bold text-amber-400">${impactResult.publicOverflow10.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Public Resilience</p>
-            </div>
+          </div>
+
+          {/* Relative potential indicators — no $ / no % leg splits */}
+          <div className="space-y-3">
+            {[
+              { label: 'Your Verified Carbon Potential', fill: Math.min(100, Math.max(10, impactResult.carbonSavedTonnes * 22)), color: 'bg-violet-400' },
+              { label: 'Community Impact Footprint', fill: Math.min(100, Math.max(8, impactResult.carbonSavedTonnes * 14)), color: 'bg-amber-400' },
+              { label: 'Forensic Audit Coverage', fill: Math.min(100, Math.max(12, impactResult.carbonSavedTonnes * 18)), color: 'bg-cyan-400' },
+            ].map((b) => (
+              <div key={b.label}>
+                <p className="text-xs text-gray-400 mb-1">{b.label}</p>
+                <div className="h-2 w-full rounded-full bg-[#1a1a1a] overflow-hidden">
+                  <div className={`h-full rounded-full ${b.color}`} style={{ width: `${b.fill}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Factor Info */}
           <div className="flex items-center justify-between text-xs text-gray-500 border-t border-gray-800 pt-3">
             <span>Factor: {impactResult.emissionFactor} kg CO₂e/kg | Processing: {impactResult.processingCost} kg CO₂e/kg</span>
             <span>Carbon Price: ${impactResult.carbonPricePerTon}/ton</span>
+          </div>
+
+          {/* Understated CTA */}
+          <div className="pt-1">
+            <a href="/bedrockfad" className="text-sm text-cyan-400 underline underline-offset-2 hover:text-cyan-300">
+              See What Your Assets Could Be Worth
+            </a>
           </div>
         </div>
       )}

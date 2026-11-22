@@ -7,7 +7,7 @@ import Header from '@/components/header';
 import { SidebarProvider, useSidebar } from '@/contexts/sidebar-context';
 import AriaModal from '@/components/aria-modal';
 
-const STANDALONE_ROUTES = ['/impact-calculator', '/global-ledger'];
+const STANDALONE_ROUTES = ['/impact-calculator', '/global-ledger', '/bedrockfad'];
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,8 +15,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
 
   const isStandalone = STANDALONE_ROUTES.some(route => pathname.startsWith(route));
+  const isRoot = pathname === '/';
 
-  if (isStandalone) return <>{children}</>;
+  if (isRoot || isStandalone) return <>{children}</>;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

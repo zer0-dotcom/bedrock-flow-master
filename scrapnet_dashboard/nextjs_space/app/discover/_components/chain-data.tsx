@@ -3,9 +3,11 @@
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 
-const stats = [
+type Stat = { label: string; value: string; sub: string; icon: string; gloss?: string }
+
+const stats: Stat[] = [
   { label: 'First Client Proof', value: '$158.24', sub: '1.86t CO₂', icon: '◈' },
-  { label: 'Vault Total', value: '$221.53', sub: '3.72t CO₂', icon: '◆' },
+  { label: 'Vault Total', value: '$221.53', sub: '3.72t CO₂', icon: '◆', gloss: 'Your verified carbon credits' },
   { label: 'Grid Region', value: 'SCE', sub: 'Zip 92706', icon: '⚡' },
   { label: 'Energy Verified', value: '703 kWh', sub: 'Metered & Audited', icon: '⊕' },
 ]
@@ -60,6 +62,7 @@ export function ChainData() {
               </div>
               <div className="text-sm text-emerald-400 font-mono mb-1">{stat?.sub ?? ''}</div>
               <div className="text-xs text-gray-500">{stat?.label ?? ''}</div>
+              {stat?.gloss && <div className="text-[10px] text-gray-400 mt-1">{stat.gloss}</div>}
             </motion.div>
           ))}
         </div>

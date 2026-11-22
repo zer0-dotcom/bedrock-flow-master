@@ -39,7 +39,7 @@ const personalNavItems = [
 ];
 
 const asphaltNavItems = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Carbon Calculator', href: '/calculator', icon: Calculator },
   { name: 'RAP Projects', href: '/projects', icon: FolderOpen },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
@@ -79,8 +79,8 @@ const impactNavItems = [
   { name: 'Global Ledger', href: '/global-ledger', icon: Globe },
 ];
 
-const ledgerNavItems = [
-  { name: 'Consolidated Ledger', href: '/ledger', icon: BookOpen },
+const ledgerNavItems: { name: string; href: string; icon: typeof BookOpen; sub?: string }[] = [
+  { name: 'Consolidated Ledger', href: '/ledger', icon: BookOpen, sub: 'Public proof of every audit' },
   { name: 'Remediation Logs', href: '/legacy-healer', icon: History },
 ];
 
@@ -426,6 +426,7 @@ export default function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={handleNavClick}
+                    title={item.sub}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200',
                       isActive
@@ -434,7 +435,10 @@ export default function Sidebar() {
                     )}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.name}
+                    <span className="flex flex-col">
+                      <span>{item.name}</span>
+                      {item.sub && <span className="text-[10px] font-normal text-amber-300/50">{item.sub}</span>}
+                    </span>
                   </Link>
                 );
               })}
@@ -446,19 +450,22 @@ export default function Sidebar() {
       {/* Footer - Service Summary (hidden on mobile to save space) */}
       <div className="p-4 border-t border-emerald-800/50 dark:border-slate-800/50 space-y-2 hidden md:block">
         {hasService('ASPHALT') && (
-          <div className="rounded-lg bg-emerald-500/10 p-2">
+          <div className="rounded-lg bg-emerald-500/10 p-2" title="Industry reference factor — not a guaranteed result. Source: EPA / IPCC / operator protocol as applicable.">
+            <p className="text-[9px] uppercase tracking-widest font-normal text-emerald-300/50">Reference Benchmark</p>
             <p className="text-xs font-semibold text-emerald-300">RAP Target</p>
             <p className="text-xs text-emerald-300/80">&lt;45 kg CO₂/ton</p>
           </div>
         )}
         {hasService('BIOCHAR') && (
-          <div className="rounded-lg bg-amber-500/10 p-2">
+          <div className="rounded-lg bg-amber-500/10 p-2" title="Industry reference factor — not a guaranteed result. Source: EPA / IPCC / operator protocol as applicable.">
+            <p className="text-[9px] uppercase tracking-widest font-normal text-amber-300/50">Reference Benchmark</p>
             <p className="text-xs font-semibold text-amber-300">CDR H:Corg</p>
             <p className="text-xs text-amber-300/80">&lt;0.4 ratio</p>
           </div>
         )}
         {hasService('METAL') && (
-          <div className="rounded-lg bg-cyan-500/10 p-2">
+          <div className="rounded-lg bg-cyan-500/10 p-2" title="Industry reference factor — not a guaranteed result. Source: EPA / IPCC / operator protocol as applicable.">
+            <p className="text-[9px] uppercase tracking-widest font-normal text-cyan-300/50">Reference Benchmark</p>
             <p className="text-xs font-semibold text-cyan-300">Metal Avoided</p>
             <p className="text-xs text-cyan-300/80">1.89 t CO₂/t Steel</p>
           </div>
@@ -470,7 +477,8 @@ export default function Sidebar() {
           </div>
         )}
         {hasService('IMPACT') && (
-          <div className="rounded-lg bg-rose-500/10 p-2">
+          <div className="rounded-lg bg-rose-500/10 p-2" title="Industry reference factor — not a guaranteed result. Source: EPA / IPCC / operator protocol as applicable.">
+            <p className="text-[9px] uppercase tracking-widest font-normal text-rose-300/50">Reference Benchmark</p>
             <p className="text-xs font-semibold text-rose-300">Trade Footprint</p>
             <p className="text-xs text-rose-300/80">2.45g CO₂/trade</p>
           </div>

@@ -1,6 +1,10 @@
 "use client";
 import LiveAvatarAgent from "@/components/LiveAvatarAgent";
 import GuideWizardV2 from "@/components/GuideWizardV2";
+import StepShell from "./_components/StepShell";
+import Step1Gate from "./_components/Step1Gate";
+import Step2Ingest from "./_components/Step2Ingest";
+import Step3Confirm from "./_components/Step3Confirm";
 
 import React, { useState, useEffect } from "react";
 
@@ -29,6 +33,7 @@ export const dynamic = "force-dynamic";
 
 export default function BedrockFADPage() {
   const [mounted, setMounted] = useState(false);
+  const [activeStep, setStep] = useState<1 | 2 | 3>(1);
   const [kwInput, setKwInput] = useState(350);
   const [hours, setHours] = useState(5200);
   const [selectedState, setSelectedState] = useState("US");
@@ -52,9 +57,7 @@ export default function BedrockFADPage() {
   const kwe = kwInput / CHILLER_COP;
   const annualKwh = kwe * hours;
   const annualUSD = annualKwh * rate;
-  const assetSovereign = annualUSD * 0.7;
-  const verificationNode = annualUSD * 0.2;
-  const publicPool = annualUSD * 0.1;
+  const estimatedValue = annualUSD;
   const recoveryPct = Math.min((kwInput / 2000) * 100, 100);
 
   const fmt = (v: number) =>
@@ -103,12 +106,23 @@ export default function BedrockFADPage() {
         </div>
       </div>
 
-      {/* MAIN CONTAINER */}
-      <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "40px 24px 60px" }}>
+      {/* PINNED 3-STEP PROGRESS */}
+      <StepShell activeStep={activeStep} />
+
+      {/* PRIMARY INTAKE FLOW */}
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "40px 24px 12px" }}>
+        {activeStep === 1 && <Step1Gate onNext={() => setStep(2)} />}
+        {activeStep === 2 && <Step2Ingest onNext={() => setStep(3)} />}
+        {activeStep === 3 && <Step3Confirm />}
+      </div>
+
+      {/* FORENSIC CONTEXT — THERMAL WASTE ORACLE */}
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "12px 24px 60px" }}>
 
         {/* PAGE HEADER */}
         <div style={{ marginBottom: 36 }}>
-          <div style={{ fontSize: 9, letterSpacing: ".18em", color: "rgba(0,242,254,.85)", textTransform: "uppercase", marginBottom: 14 }}>// ASSET REALIZATION CONSOLE — THERMAL WASTE ORACLE</div>
+          <div style={{ fontSize: 9, letterSpacing: ".18em", color: "rgba(0,242,254,.85)", textTransform: "uppercase", marginBottom: 6 }}>// ASSET REALIZATION CONSOLE — THERMAL WASTE ORACLE</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 14 }}>Calculate your building&apos;s wasted energy</div>
           <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.15, color: "#f8fafc" }}>
             Paid-For Waste Energy.<br />
             <span style={{ color: "#00F2FE" }}>Sovereign Liquid Value.</span>
@@ -129,6 +143,7 @@ export default function BedrockFADPage() {
               <span style={{ fontSize: 10, letterSpacing: ".16em", color: "#00F2FE", textTransform: "uppercase" }}>GhostConverter™ Prism Engine</span>
               <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>COP 3.50 BASELINE</span>
             </div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: -14, marginBottom: 20 }}>Convert thermal waste to carbon credit value</div>
 
             {/* kW SLIDER */}
             <div style={{ marginBottom: 22 }}>
@@ -189,19 +204,9 @@ export default function BedrockFADPage() {
               </div>
             </div>
 
-            {/* CANONICAL BPS STRIP */}
-            <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 14 }}>
-              {[
-                { label: "Asset Sovereign", val: fmt(assetSovereign), bps: "7,000 BPS (70.00%)", color: "#10B981" },
-                { label: "Verification Node", val: fmt(verificationNode), bps: "2,000 BPS (20.00%)", color: "#00F2FE" },
-                { label: "Public Pool", val: fmt(publicPool), bps: "1,000 BPS (10.00%)", color: "#F59E0B" },
-              ].map((s, i) => (
-                <div key={s.label} style={{ textAlign: "center", padding: "0 8px", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
-                  <div style={{ fontSize: 8, letterSpacing: ".1em", color: "#cbd5e1", textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 12, color: s.color, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
-                  <div style={{ fontSize: 8, color: "#64748b", marginTop: 2 }}>{s.bps}</div>
-                </div>
-              ))}
+            {/* SETTLEMENT PROTOCOL NOTE */}
+            <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 10, letterSpacing: ".1em", color: "#94a3b8", textTransform: "uppercase" }}>Asset value routed through Bedrock dMRV settlement protocol</div>
             </div>
           </div>
 
@@ -273,7 +278,7 @@ export default function BedrockFADPage() {
               { n: "01", icon: "fa-building", label: "Asset Discovery", desc: "Macro-thermal waste scan across facility footprint via satellite + public utility grid" },
               { n: "02", icon: "fa-file-invoice", label: "Invoice OCR", desc: "Upload utility bills for automated kWh/kW demand extraction against ASHRAE 90.1 baselines" },
               { n: "03", icon: "fa-shield-halved", label: "Sentinel Verification", desc: "Tri-layer consensus gate: Document ≥95% / LLM ≥75% / Spatial ≥75% · Composite ≥ 0.72" },
-              { n: "04", icon: "fa-coins", label: "Yield Settlement", desc: "Sovereign BPS: Asset Sovereign 7,000 / Verification Node 2,000 / Public Pool 1,000" },
+              { n: "04", icon: "fa-coins", label: "Yield Settlement", desc: "Settlement processed via Bedrock Internal dMRV Standard" },
             ].map(s => (
               <div key={s.n} style={{ borderLeft: "1px solid rgba(0,242,254,.15)", paddingLeft: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
