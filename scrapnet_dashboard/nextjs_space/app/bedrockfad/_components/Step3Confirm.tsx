@@ -3,7 +3,11 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function Step3Confirm() {
+export default function Step3Confirm({
+  submissionRef,
+}: {
+  submissionRef: string | null;
+}) {
   const router = useRouter();
 
   return (
@@ -42,6 +46,18 @@ export default function Step3Confirm() {
       <p style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.7, marginBottom: 32 }}>
         Expect your verified asset report within 24 hours. Our operators review every
         submission under the Bedrock Internal dMRV Standard.
+      </p>
+
+      <p
+        style={{
+          fontSize: 11,
+          fontFamily: 'monospace',
+          letterSpacing: '.18em',
+          color: '#22d3ee',
+          marginBottom: 16,
+        }}
+      >
+        REF: {submissionRef ?? '—'}
       </p>
 
       <button

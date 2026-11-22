@@ -24,7 +24,15 @@ const labelStyle: React.CSSProperties = {
   color: '#94a3b8',
 };
 
-export default function Step1Gate({ onNext }: { onNext: () => void }) {
+export default function Step1Gate({
+  onNext,
+}: {
+  onNext: (payload: {
+    companyName: string;
+    contactName: string;
+    contactEmail: string;
+  }) => void;
+}) {
   const [company, setCompany] = useState('');
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
@@ -37,7 +45,12 @@ export default function Step1Gate({ onNext }: { onNext: () => void }) {
 
   const handleContinue = () => {
     setTouched(true);
-    if (allValid) onNext();
+    if (allValid)
+      onNext({
+        companyName: company.trim(),
+        contactName: contact.trim(),
+        contactEmail: email.trim(),
+      });
   };
 
   return (

@@ -2036,3 +2036,19 @@ model TelemetryReading {
   @@index([settled])
   @@map("telemetry_readings")
 }
+
+
+model CorporateIntake {
+  id            String   @id @default(cuid())
+  submissionRef String   @unique
+  companyName   String
+  contactName   String
+  contactEmail  String
+  fileName      String
+  mimeType      String
+  fileSizeBytes Int
+  fileHash      String
+  storagePath   String
+  status        String   @default("PENDING_FORENSIC_REVIEW")
+  createdAt     DateTime @default(now())
+}

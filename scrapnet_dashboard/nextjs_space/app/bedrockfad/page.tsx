@@ -34,6 +34,12 @@ export const dynamic = "force-dynamic";
 export default function BedrockFADPage() {
   const [mounted, setMounted] = useState(false);
   const [activeStep, setStep] = useState<1 | 2 | 3>(1);
+  const [submissionRef, setSubmissionRef] = useState<string | null>(null);
+  const [contactPayload, setContactPayload] = useState<{
+    companyName: string;
+    contactName: string;
+    contactEmail: string;
+  } | null>(null);
   const [kwInput, setKwInput] = useState(350);
   const [hours, setHours] = useState(5200);
   const [selectedState, setSelectedState] = useState("US");
@@ -111,9 +117,24 @@ export default function BedrockFADPage() {
 
       {/* PRIMARY INTAKE FLOW */}
       <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "40px 24px 12px" }}>
-        {activeStep === 1 && <Step1Gate onNext={() => setStep(2)} />}
-        {activeStep === 2 && <Step2Ingest onNext={() => setStep(3)} />}
-        {activeStep === 3 && <Step3Confirm />}
+        {activeStep === 1 && (
+          <Step1Gate
+            onNext={(payload) => {
+              setContactPayload(payload);
+              setStep(2);
+            }}
+          />
+        )}
+        {activeStep === 2 && (
+          <Step2Ingest
+            contactPayload={contactPayload}
+            onNext={(ref) => {
+              setSubmissionRef(ref);
+              setStep(3);
+            }}
+          />
+        )}
+        {activeStep === 3 && <Step3Confirm submissionRef={submissionRef} />}
       </div>
 
       {/* FORENSIC CONTEXT — THERMAL WASTE ORACLE */}
