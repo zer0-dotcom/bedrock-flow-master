@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import HelpTooltip from '@/components/ui/HelpTooltip';
 
 export default function Step3Confirm({
   submissionRef,
@@ -58,6 +59,7 @@ export default function Step3Confirm({
         }}
       >
         REF: {submissionRef ?? '—'}
+        <HelpTooltip content="A unique forensic reference ID auto-assigned to your submission. Keep this for your records." />
       </p>
 
       <button

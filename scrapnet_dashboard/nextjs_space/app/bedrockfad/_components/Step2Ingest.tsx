@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import HelpTooltip from '@/components/ui/HelpTooltip';
 
 interface ContactPayload {
   companyName: string;
@@ -11,9 +12,11 @@ interface ContactPayload {
 export default function Step2Ingest({
   contactPayload,
   onNext,
+  referralCode,
 }: {
   contactPayload: ContactPayload | null;
   onNext: (submissionRef: string) => void;
+  referralCode?: string | null;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,6 +53,7 @@ export default function Step2Ingest({
       fd.append('companyName', contactPayload.companyName);
       fd.append('contactName', contactPayload.contactName);
       fd.append('contactEmail', contactPayload.contactEmail);
+      if (referralCode) fd.append('referralCode', referralCode);
       fd.append('file', selectedFile);
 
       const res = await fetch('/api/bedrockfad/intake', {
@@ -105,6 +109,7 @@ export default function Step2Ingest({
       </div>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#f8fafc', marginBottom: 24 }}>
         Upload your facility data
+        <HelpTooltip content="Accepted: PDF, DOCX, XLSX, images. Max 50 MB. Files are SHA-256 verified on receipt and stored in an isolated vault — never publicly accessible." />
       </h2>
 
       <label
@@ -142,9 +147,42 @@ export default function Step2Ingest({
           {selectedFile ? `Selected: ${selectedFile.name}` : 'Upload your facility data'}
         </div>
         <div style={{ fontSize: 11, color: '#94a3b8', letterSpacing: '.06em' }}>
-          Accepted formats: PDF, XML, CSV · Max 10 MB
+          Accepted formats: PDF, XML, CSV · Max 50 MB
         </div>
       </label>
+
+      <details style={{ marginTop: 14 }}>
+        <summary
+          style={{
+            fontSize: 11,
+            color: '#94a3b8',
+            letterSpacing: '.04em',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          What can I upload?
+        </summary>
+        <ul
+          style={{
+            marginTop: 10,
+            padding: '12px 14px 12px 28px',
+            border: '1px solid rgba(255,255,255,.08)',
+            borderRadius: 3,
+            fontSize: 11,
+            color: '#cbd5e1',
+            lineHeight: 1.9,
+            listStyle: 'disc',
+          }}
+        >
+          <li>Phase I / Phase II Environmental Site Assessments (PDF)</li>
+          <li>Contamination remediation cost reports</li>
+          <li>Mineral assay certificates (PDF, XLSX)</li>
+          <li>Biochar production &amp; verification records</li>
+          <li>Legacy industrial liability documentation</li>
+          <li>Corporate carbon accounting worksheets (XLSX)</li>
+        </ul>
+      </details>
 
       {selectedFile && (
         <div
@@ -160,7 +198,10 @@ export default function Step2Ingest({
           }}
         >
           <span style={{ fontFamily: 'monospace', letterSpacing: '.04em' }}>{selectedFile.name}</span>
-          <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>{fileSizeKb} KB</span>
+          <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+            {fileSizeKb} KB
+            <HelpTooltip content="This SHA-256 fingerprint confirms your file arrived unmodified. It is recorded on the submission ledger." />
+          </span>
         </div>
       )}
 

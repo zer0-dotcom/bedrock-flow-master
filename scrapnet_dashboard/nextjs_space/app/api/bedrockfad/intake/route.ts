@@ -1,7 +1,7 @@
 // app/api/bedrockfad/intake/route.ts
 // Hardened corporate-intake ingest endpoint.
 // Pipeline: IP rate-limit -> parse -> contact validation -> email rate-limit ->
-// file presence -> 10MB cap -> magic-byte validation -> UUID-sanitized storage
+// file presence -> 50MB cap -> magic-byte validation -> UUID-sanitized storage
 // (0600, outside public/) -> SHA-256 -> CorporateIntake persist ->
 // best-effort operator email -> 201 { ok, submissionRef }.
 
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 
 // Operator-specified absolute storage path — outside public/, mode-700 directory.
 const UPLOAD_DIR = '/home/ubuntu/bedrock-flow-master/.uploads/corporate-intake';
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
 const ContactSchema = z.object({
   companyName: z.string().min(1).max(200),
@@ -80,6 +80,11 @@ export async function POST(request: Request) {
   }
   const { companyName, contactName, contactEmail } = parsed.data;
 
+  // Optional referral code — validate shape; ignore silently if malformed (never fail submission).
+  const REF_RE = /^(REF|SPEC)-[A-Z0-9]{6}$/;
+  const rawRef = String(formData.get('referralCode') ?? '').trim().toUpperCase();
+  const referralCode = REF_RE.test(rawRef) ? rawRef : null;
+
   // (4) Email rate-limit.
   const emailLimit = checkRateLimit(`email:${contactEmail}`);
   if (!emailLimit.allowed) {
@@ -99,10 +104,10 @@ export async function POST(request: Request) {
   }
   const file = fileEntry;
 
-  // (6) 10MB cap (check cheap size before buffering).
+  // (6) 50MB cap (check cheap size before buffering).
   if (file.size > MAX_BYTES) {
     return NextResponse.json(
-      { ok: false, error: 'File exceeds the 10 MB limit.' },
+      { ok: false, error: 'File exceeds the 50 MB limit.' },
       { status: 413 },
     );
   }
@@ -110,7 +115,7 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   if (buffer.length > MAX_BYTES) {
     return NextResponse.json(
-      { ok: false, error: 'File exceeds the 10 MB limit.' },
+      { ok: false, error: 'File exceeds the 50 MB limit.' },
       { status: 413 },
     );
   }
@@ -161,6 +166,7 @@ export async function POST(request: Request) {
         fileSizeBytes: buffer.length,
         fileHash,
         storagePath,
+        referralCode,
       },
     });
   } catch (err) {

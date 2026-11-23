@@ -96,6 +96,9 @@ model User {
   // Recycling logs submitted by this user
   recyclingLogs   RecyclingLog[]
 
+  // Partner / Specialist profile (Sprint 5 — additive)
+  partnerProfile  PartnerProfile?
+
   @@map("users")
 }
 
@@ -2051,4 +2054,29 @@ model CorporateIntake {
   storagePath   String
   status        String   @default("PENDING_FORENSIC_REVIEW")
   createdAt     DateTime @default(now())
+
+  // Sprint 5 — additive referral / approval / attestation fields
+  referralCode         String?
+  clientWalletAddress  String?
+  attestationTxSig     String?
+  approvedBy           String?
+  approvedAt           DateTime?
+  rejectedBy           String?
+  rejectedAt           DateTime?
+  rejectionReason      String?
+}
+
+model PartnerProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  partnerType   String   // "REFERRER" | "SPECIALIST"
+  refCode       String   @unique  // REF-XXXXXX
+  specCode      String?  @unique  // SPEC-XXXXXX (Specialist only)
+  companyName   String?
+  website       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@map("partner_profiles")
 }

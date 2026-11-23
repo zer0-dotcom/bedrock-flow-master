@@ -21,7 +21,10 @@ import {
   RefreshCw,
   Lock,
   LogOut,
+  LayoutGrid,
+  Inbox,
 } from 'lucide-react';
+import IntakeQueuePanel from './_components/IntakeQueuePanel';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
@@ -65,6 +68,9 @@ export default function AdminClient() {
   // ── Auth state ──
   const [user, setUser] = useState<SessionUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+
+  // ── Admin tab switcher (Sprint 5 — additive) ──
+  const [adminTab, setAdminTab] = useState<'assets' | 'intake'>('assets');
 
   // ── Discovery state ──
   const [assets, setAssets] = useState<DiscoveryAsset[]>([]);
@@ -278,6 +284,38 @@ export default function AdminClient() {
         </div>
       </div>
 
+      {/* ═══ TAB SWITCHER (Sprint 5 — additive) ═══ */}
+      <div className="flex items-center gap-2 border-b border-zinc-800 pb-px">
+        <button
+          onClick={() => setAdminTab('assets')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-t-lg border-b-2 transition-all',
+            adminTab === 'assets'
+              ? 'text-cyan-300 border-cyan-400'
+              : 'text-zinc-500 border-transparent hover:text-zinc-300'
+          )}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Asset Review
+        </button>
+        <button
+          onClick={() => setAdminTab('intake')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-t-lg border-b-2 transition-all',
+            adminTab === 'intake'
+              ? 'text-cyan-300 border-cyan-400'
+              : 'text-zinc-500 border-transparent hover:text-zinc-300'
+          )}
+        >
+          <Inbox className="h-4 w-4" />
+          Intake Queue
+        </button>
+      </div>
+
+      {adminTab === 'intake' && <IntakeQueuePanel />}
+
+      {adminTab === 'assets' && (
+      <>
       {/* ═══ STATS STRIP ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="rounded-xl bg-zinc-900/80 border border-zinc-700/50 p-4">
@@ -586,6 +624,8 @@ export default function AdminClient() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

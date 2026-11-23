@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import HelpTooltip from '@/components/ui/HelpTooltip';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -26,12 +27,14 @@ const labelStyle: React.CSSProperties = {
 
 export default function Step1Gate({
   onNext,
+  referralCode,
 }: {
   onNext: (payload: {
     companyName: string;
     contactName: string;
     contactEmail: string;
   }) => void;
+  referralCode?: string | null;
 }) {
   const [company, setCompany] = useState('');
   const [contact, setContact] = useState('');
@@ -83,7 +86,10 @@ export default function Step1Gate({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
-          <label style={labelStyle}>Company Name *</label>
+          <label style={labelStyle}>
+            Company Name *
+            <HelpTooltip content="Enter the legal entity name associated with the environmental asset or liability being submitted." />
+          </label>
           <input
             type="text"
             value={company}
@@ -121,7 +127,10 @@ export default function Step1Gate({
         </div>
 
         <div>
-          <label style={labelStyle}>Work Email *</label>
+          <label style={labelStyle}>
+            Work Email *
+            <HelpTooltip content="Used only for submission status updates. Never shared or used for marketing." />
+          </label>
           <input
             type="email"
             value={email}
@@ -139,6 +148,30 @@ export default function Step1Gate({
           )}
         </div>
       </div>
+
+      {referralCode && (
+        <div
+          style={{
+            marginTop: 20,
+            padding: '12px 14px',
+            borderRadius: 3,
+            background: 'rgba(6,182,212,.06)',
+            border: '1px solid rgba(6,182,212,.22)',
+          }}
+        >
+          <div style={{ ...labelStyle, marginBottom: 4 }}>Referred by</div>
+          <div
+            style={{
+              fontSize: 13,
+              fontFamily: 'monospace',
+              letterSpacing: '.08em',
+              color: '#22d3ee',
+            }}
+          >
+            Partner Code: {referralCode}
+          </div>
+        </div>
+      )}
 
       <button
         onClick={handleContinue}

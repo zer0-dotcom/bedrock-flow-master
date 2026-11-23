@@ -47,6 +47,29 @@ export default function BedrockFADPage() {
   const [dragOver, setDragOver] = useState(false);
   const [scanActive, setScanActive] = useState(false);
   const [ticker, setTicker] = useState({ flux: 847.3, co2: 1284.7 });
+  const [refCode, setRefCode] = useState<string | null>(null);
+
+  // Sprint 5 — referral capture: read ?ref=, persist a 90-day cookie, surface read-only.
+  useEffect(() => {
+    const REF_RE = /^(REF|SPEC)-[A-Z0-9]{6}$/;
+    const readCookie = (key: string): string | null => {
+      const m = document.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : null;
+    };
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const incoming = (params.get('ref') || '').trim().toUpperCase();
+      if (REF_RE.test(incoming)) {
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        // 90 days = 7776000 seconds; HttpOnly:false (client-set), SameSite=Lax.
+        document.cookie = `bedrock_ref=${encodeURIComponent(incoming)}; max-age=7776000; path=/; SameSite=Lax${secure}`;
+        setRefCode(incoming);
+      } else {
+        const existing = readCookie('bedrock_ref');
+        if (existing && REF_RE.test(existing)) setRefCode(existing);
+      }
+    } catch { /* noop */ }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -119,6 +142,7 @@ export default function BedrockFADPage() {
       <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "40px 24px 12px" }}>
         {activeStep === 1 && (
           <Step1Gate
+            referralCode={refCode}
             onNext={(payload) => {
               setContactPayload(payload);
               setStep(2);
@@ -128,6 +152,7 @@ export default function BedrockFADPage() {
         {activeStep === 2 && (
           <Step2Ingest
             contactPayload={contactPayload}
+            referralCode={refCode}
             onNext={(ref) => {
               setSubmissionRef(ref);
               setStep(3);
