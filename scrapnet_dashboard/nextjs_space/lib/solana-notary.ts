@@ -45,7 +45,8 @@ export interface NotaryAnchorPayload {
     | 'HUM_FREQUENCY_SHIFT'
     | 'SPATIAL_ATTESTATION'
     | 'BIOCHAR_CDR'
-    | 'METAL_RECOVERY';
+    | 'METAL_RECOVERY'
+    | 'CORPORATE_INTAKE_APPROVED';
   entityId: string;
   dataHash: string;
   carbonTonnes?: number;

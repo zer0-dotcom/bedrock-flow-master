@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { extractUser } from '@/lib/rbac-guard';
 import { hasAnyPermission } from '@/lib/rbac';
+import { anchorToChain, hashForAnchor, getNotaryStatus } from '@/lib/solana-notary';
 
 export async function POST(
   request: NextRequest,
@@ -56,9 +57,9 @@ export async function POST(
     );
   }
 
-  // ── Approve (NO anchorToChain) ───────────────────────────────────
+  // ── Approve ──────────────────────────────────────────────────────
   const approvedAt = new Date();
-  await prisma.corporateIntake.update({
+  const updatedIntake = await prisma.corporateIntake.update({
     where: { id },
     data: {
       status: 'APPROVED',
@@ -68,5 +69,51 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ success: true, id, status: 'APPROVED', approvedAt });
+  // ── Guarded, opt-in post-approval notary attestation ─────────────
+  // Non-blocking: if the notary is unconfigured or the anchor fails, the
+  // approval stands and attestationTxSig remains null. No rollback.
+  const notaryStatus = getNotaryStatus();
+  let attestationTxSig: string | null = null;
+  let attestationError: string | null = null;
+
+  if (notaryStatus.configured) {
+    try {
+      const anchorData = {
+        submissionRef: intake.submissionRef,
+        action: 'CORPORATE_INTAKE_APPROVED',
+        operator: user.id,
+        approvedAt: approvedAt.toISOString(),
+        clientWalletAddress: clientWalletAddress ?? null,
+      };
+      const r = await anchorToChain({
+        type: 'CORPORATE_INTAKE_APPROVED',
+        entityId: intake.submissionRef,
+        dataHash: hashForAnchor(anchorData),
+        metadata: anchorData,
+      });
+      if (r.success) {
+        attestationTxSig = r.transactionSignature;
+        await prisma.corporateIntake.update({
+          where: { id },
+          data: { attestationTxSig },
+        });
+      } else {
+        attestationError = r.error ?? 'Attestation failed';
+      }
+    } catch (err: any) {
+      attestationError = err?.message ?? 'Attestation failed';
+      console.error('[notary] anchorToChain failed:', attestationError);
+    }
+  } else {
+    attestationError = 'Notary not configured — attestation skipped';
+  }
+
+  return NextResponse.json({
+    success: true,
+    id,
+    status: 'APPROVED',
+    approvedAt: updatedIntake.approvedAt,
+    attestationTxSig,
+    attestationError,
+  });
 }

@@ -14,6 +14,9 @@ import {
   XCircle,
   X,
   FileText,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 
 type IntakeStatus = 'PENDING_FORENSIC_REVIEW' | 'APPROVED' | 'REJECTED';
@@ -31,6 +34,7 @@ interface IntakeRow {
   status: string;
   referralCode: string | null;
   clientWalletAddress: string | null;
+  attestationTxSig: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
   rejectedBy: string | null;
@@ -279,6 +283,11 @@ export default function IntakeQueuePanel() {
                               <Detail label="Rejected At" value={fmtDate(row.rejectedAt)} />
                               <Detail label="Rejection Reason" value={row.rejectionReason ?? '—'} wrap />
                             </div>
+                            {row.status === 'APPROVED' && (
+                              <div className="mt-3 pt-3 border-t border-zinc-800/60">
+                                <AttestationField txSig={row.attestationTxSig} />
+                              </div>
+                            )}
                           </td>
                         </tr>
                       )}
@@ -381,6 +390,58 @@ export default function IntakeQueuePanel() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AttestationField({ txSig }: { txSig: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!txSig) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] uppercase tracking-wider text-zinc-500">Solana Attestation</span>
+        <span className="text-zinc-500 italic text-xs">Attestation pending / not configured</span>
+      </div>
+    );
+  }
+
+  const truncated = `${txSig.slice(0, 8)}…${txSig.slice(-8)}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(txSig);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable — no-op */
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] uppercase tracking-wider text-zinc-500">Solana Attestation (Tx)</span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-emerald-400 text-xs">{truncated}</span>
+        <button
+          type="button"
+          onClick={copy}
+          title="Copy transaction signature"
+          className="text-zinc-400 hover:text-zinc-200 transition-colors"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+        <a
+          href={`https://explorer.solana.com/tx/${txSig}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="View on Solana Explorer"
+          className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span className="text-[10px] uppercase tracking-wider">Explorer</span>
+        </a>
+      </div>
     </div>
   );
 }

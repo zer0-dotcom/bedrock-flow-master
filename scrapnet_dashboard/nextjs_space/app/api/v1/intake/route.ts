@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
         status: true,
         referralCode: true,
         clientWalletAddress: true,
+        attestationTxSig: true,
         approvedBy: true,
         approvedAt: true,
         rejectedBy: true,
