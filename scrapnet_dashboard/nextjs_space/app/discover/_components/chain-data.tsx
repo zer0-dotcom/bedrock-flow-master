@@ -6,8 +6,8 @@ import { useInView } from 'react-intersection-observer'
 type Stat = { label: string; value: string; sub: string; icon: string; gloss?: string }
 
 const stats: Stat[] = [
-  { label: 'First Client Proof', value: '$158.24', sub: '1.86t CO₂', icon: '◈' },
-  { label: 'Vault Total', value: '$221.53', sub: '3.72t CO₂', icon: '◆', gloss: 'Your verified carbon credits' },
+  { label: 'First Client Proof · Gross', value: '$158.24', sub: '1.86t CO₂', icon: '◈' },
+  { label: 'Net Vault Total', value: '$221.53', sub: '3.72t CO₂', icon: '◆' },
   { label: 'Grid Region', value: 'SCE', sub: 'Zip 92706', icon: '⚡' },
   { label: 'Energy Verified', value: '703 kWh', sub: 'Metered & Audited', icon: '⊕' },
 ]

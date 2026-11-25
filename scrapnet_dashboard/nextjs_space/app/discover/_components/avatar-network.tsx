@@ -68,6 +68,15 @@ const avatarColorMap: Record<string, { border: string; text: string; bg: string;
 
 export function AvatarNetwork() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.05 })
+  const [theaterCard, setTheaterCard] = useState<Avatar | null>(null)
+
+  // S6-02: dismiss theater on ESC
+  useEffect(() => {
+    if (!theaterCard) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setTheaterCard(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [theaterCard])
 
   return (
     <section className="py-24 px-6 relative" ref={ref}>
@@ -95,10 +104,14 @@ export function AvatarNetwork() {
                 initial={{ opacity: 0, y: 40 }}
                 animate={inView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className={`rounded-2xl border ${colors?.border ?? ''} bg-gray-900/60 backdrop-blur-sm overflow-hidden group`}
+                onClick={() => setTheaterCard(avatar)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheaterCard(avatar) } }}
+                className={`cursor-pointer rounded-2xl border ${colors?.border ?? ''} bg-gray-900/60 backdrop-blur-sm overflow-hidden group`}
               >
                 {/* Video slot */}
-                <AvatarVideoSlot name={avatar?.name ?? ''} color={colors} />
+                <AvatarVideoSlot name={avatar?.name ?? ''} color={colors} theaterOpen={theaterCard !== null} />
 
                 {/* Info */}
                 <div className="p-5">
@@ -116,11 +129,41 @@ export function AvatarNetwork() {
           })}
         </div>
       </div>
+
+      {/* S6-02: theater pop-out modal */}
+      {theaterCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          onClick={() => setTheaterCard(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${theaterCard.name} theater`}
+        >
+          <button
+            type="button"
+            onClick={() => setTheaterCard(null)}
+            aria-label="Close theater"
+            className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 text-2xl leading-none text-white"
+          >
+            ×
+          </button>
+          <video
+            key={theaterCard.name}
+            src={`/videos/${theaterCard.name.toLowerCase()}.mp4`}
+            poster={`/videos/posters/${theaterCard.name.toLowerCase()}.jpg`}
+            className="max-w-4xl max-h-[80vh] w-auto h-auto rounded-xl shadow-2xl"
+            autoPlay
+            loop
+            playsInline
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </section>
   )
 }
 
-function AvatarVideoSlot({ name, color }: { name: string; color: { border: string; text: string; bg: string; glow: string } }) {
+function AvatarVideoSlot({ name, color, theaterOpen = false }: { name: string; color: { border: string; text: string; bg: string; glow: string }; theaterOpen?: boolean }) {
   const [hasError, setHasError] = useState(false)
   const [isTouch, setIsTouch] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -137,6 +180,14 @@ function AvatarVideoSlot({ name, color }: { name: string; color: { border: strin
     mq.addEventListener('change', update)
     return () => mq.removeEventListener('change', update)
   }, [])
+
+  // S6-02 dual-audio guard: force this grid card muted while the theater modal is open
+  useEffect(() => {
+    if (!theaterOpen) return
+    const v = videoRef.current
+    if (v) v.muted = true
+    setIsMuted(true)
+  }, [theaterOpen])
 
   const play = () => {
     videoRef.current?.play()?.catch((err) => console.error(`Avatar video ${slug} failed to play:`, err))

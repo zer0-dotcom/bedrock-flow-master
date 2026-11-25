@@ -5,7 +5,7 @@ import { useState } from 'react';
 import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 import { SidebarProvider, useSidebar } from '@/contexts/sidebar-context';
-import AriaModal from '@/components/aria-modal';
+import ChatWindow from '@/components/ChatWindow';
 
 const STANDALONE_ROUTES = ['/impact-calculator', '/global-ledger', '/bedrockfad'];
 
@@ -41,7 +41,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-      <AriaModal open={chatOpen} onClose={() => setChatOpen(false)} />
+      <ChatWindow open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }
