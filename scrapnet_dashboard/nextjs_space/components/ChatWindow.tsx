@@ -7,24 +7,25 @@ import React, {
   useCallback,
 } from 'react';
 
-// ─── SPRINT_8_CLEAN_REWRITE ───────────────────────────────────────────────
-// Defects resolved:
-//  1. Robotic voice  → browser TTS REMOVED; ElevenLabs /api/tts only
-//  2. Vexa 404       → vexa.avif (now on disk)
-//  3. Dead tab clicks → all overlay layers pointer-events-none; tabs pointer-events-auto
-//  4. Flat glass     → inline backdropFilter, NOT Tailwind backdrop-blur class
-// Additional: speechRequestId race-condition guard; <video muted autoPlay loop>
-// Roster: 8 personas, Orion added, Vexa exactly once, all portraits lowercase .avif
-// Contract: POST /api/chat { messages, persona } → { reply }
+// ─── S6-04 LIVE AVATAR SYNC ───────────────────────────────────────────────
+// Roster synced to the 6 live avatars from /discover (avatar-network.tsx).
+// Legacy personas removed entirely; default persona is Rael.
+// Assets: portrait /videos/posters/<slug>.jpg, video /videos/<slug>.mp4
+//         (slug = name.toLowerCase(); same live assets as /discover).
+// Voice: ElevenLabs /api/tts only (no browser TTS); race-condition guarded.
+// Contract: POST /api/chat { messages, persona } -> { reply }.
+//   apiPersona routes personas without a dedicated /api/chat system prompt
+//   to the closest existing non-legacy prompt (see route.ts prompt keys).
 // ─────────────────────────────────────────────────────────────────────────
 
 interface PersonaDef {
   id: string;
   name: string;
   role: string;
+  apiPersona?: string; // /api/chat persona key override when no own prompt exists
   voiceId: string;
   portrait: string;
-  video: string | null; // null → no idle.mp4 on disk; render portrait directly
+  video: string | null; // null → render portrait directly
   color: string;
   accent: string;
   greeting: string;
@@ -33,108 +34,85 @@ interface PersonaDef {
 // ─── PERSONA REGISTRY ────────────────────────────────────────────────────
 const PERSONAS: PersonaDef[] = [
   {
-    id: 'zero',
-    name: 'Zero',
-    role: 'Systems Architect',
+    id: 'rael',
+    name: 'Rael',
+    role: 'Sovereign Architect',
+    apiPersona: 'aria', // no dedicated prompt in route.ts; closest non-legacy key
     voiceId: 'nPczCjzI2devNBz1zQrb',
-    portrait: '/avatars/zero.avif',
-    video: '/avatars/zero/idle.mp4',
-    color: '#8B5CF6',
-    accent: 'rgba(139,92,246,',
-    greeting:
-      "I'm Zer0, the lead AI intelligence of the SPEXTER platform. " +
-      "Carbon accounting, regulatory compliance, asset-level analysis — what are we solving today?",
-  },
-  {
-    id: 'nova',
-    name: 'Nova',
-    role: 'Data Intelligence',
-    voiceId: 'MF3mGyEYCl7XYWbV9V6O',
-    portrait: '/avatars/nova.avif',
-    video: '/avatars/nova/idle.mp4',
-    color: '#06B6D4',
-    accent: 'rgba(6,182,212,',
-    greeting:
-      "Nova online. Real-time monitoring, anomaly detection, trend analysis. " +
-      "What data question are we working?",
-  },
-  {
-    id: 'aura',
-    name: 'Aura',
-    role: 'ESG Analytics',
-    voiceId: 'piTKgcLEGmPE4e6mEKli',
-    portrait: '/avatars/aura.avif',
-    video: '/avatars/aura/idle.mp4',
+    portrait: '/videos/posters/rael.jpg',
+    video: '/videos/rael.mp4',
     color: '#10B981',
     accent: 'rgba(16,185,129,',
     greeting:
-      "Aura here. ESG analytics, scenario modeling, regulatory risk exposure. " +
-      "What are we analyzing?",
+      "I'm Rael, Sovereign Architect of the Vault. " +
+      "I oversee carbon proof verification and on-chain attestation. What are we structuring today?",
   },
   {
     id: 'echo',
     name: 'Echo',
-    role: 'Audit & Compliance',
+    role: 'Temporal Analyst',
     voiceId: 'EXAVITQu4vr4xnSDxMaL',
-    portrait: '/avatars/echo.avif',
-    video: '/avatars/echo/idle.mp4',
-    color: '#F59E0B',
-    accent: 'rgba(245,158,11,',
+    portrait: '/videos/posters/echo.jpg',
+    video: '/videos/echo.mp4',
+    color: '#A855F7',
+    accent: 'rgba(168,85,247,',
     greeting:
-      "Echo active. TCFD, ISSB IFRS S2, SEC Climate Rules, EU CSRD/ESRS E1. " +
-      "Which framework are we working?",
+      "Echo here, Temporal Analyst for the Legacy Healer. " +
+      "I run 9-year lookback analysis to reconstruct historical energy patterns and surface legacy carbon proofs. Where shall we begin?",
   },
   {
-    id: 'aria',
-    name: 'Aria',
-    role: 'Operations Lead',
-    voiceId: '21m00Tcm4TlvDq8ikWAM',
-    portrait: '/avatars/aria.avif',
-    video: '/avatars/aria/idle.mp4',
-    color: '#EC4899',
-    accent: 'rgba(236,72,153,',
+    id: 'nexus',
+    name: 'Nexus',
+    role: 'Grid Intelligence',
+    apiPersona: 'aura', // no dedicated prompt in route.ts; closest non-legacy key
+    voiceId: 'XB0fDUnXU5powFXDhCwa',
+    portrait: '/videos/posters/nexus.jpg',
+    video: '/videos/nexus.mp4',
+    color: '#06B6D4',
+    accent: 'rgba(6,182,212,',
     greeting:
-      "Aria online. Operations, workflows, verification pipeline status. " +
-      "What are we running?",
-  },
-  {
-    id: 'vexa',
-    name: 'Vexa',
-    role: 'Risk Intelligence',
-    voiceId: 'kzu3kyvzVxdPA7NdrgD7',
-    portrait: '/avatars/vexa.avif',
-    video: '/avatars/vexa/idle.mp4',
-    color: '#6366F1',
-    accent: 'rgba(99,102,241,',
-    greeting:
-      "Vexa here. Risk exposure, greenwashing flags, counterparty and regulatory risk. " +
-      "What risk are we sizing?",
+      "Nexus online, Grid Intelligence for BedrockFAD. " +
+      "I map commercial energy flows through the GhostConverter forensic audit engine and turn utility data into verified proofs. Which facility are we decoding?",
   },
   {
     id: 'lyra',
     name: 'Lyra',
-    role: 'Carbon Markets',
+    role: 'Prism Calibrator',
     voiceId: 'AZnzlk1XvdvUeBnXmlld',
-    portrait: '/avatars/lyra.avif',
-    video: '/avatars/lyra/idle.mp4',
-    color: '#F97316',
-    accent: 'rgba(249,115,22,',
+    portrait: '/videos/posters/lyra.jpg',
+    video: '/videos/lyra.mp4',
+    color: '#F59E0B',
+    accent: 'rgba(245,158,11,',
     greeting:
-      "Lyra online. Carbon credits, CDR pricing, registries and offtake. " +
-      "What market question are we working?",
+      "Lyra here, Prism Calibrator for the Prism Engine. " +
+      "I tune the carbon valuation algorithm so every proof reflects true sovereign equity value. What are we calibrating?",
   },
   {
-    id: 'orion',
-    name: 'Orion',
-    role: 'Infrastructure Intelligence',
-    voiceId: 'XB0fDUnXU5powFXDhCwa',
-    portrait: '/avatars/orion.avif',
-    video: null,
+    id: 'seren',
+    name: 'Seren',
+    role: 'Sentinel Warden',
+    apiPersona: 'echo', // no dedicated prompt in route.ts; closest non-legacy key
+    voiceId: 'kzu3kyvzVxdPA7NdrgD7',
+    portrait: '/videos/posters/seren.jpg',
+    video: '/videos/seren.mp4',
+    color: '#F43F5E',
+    accent: 'rgba(244,63,94,',
+    greeting:
+      "Seren online, Sentinel Warden of the Sentinel Gate. " +
+      "I command the three-bar verification triad: data authenticity, temporal consistency, forensic integrity. What needs validating?",
+  },
+  {
+    id: 'aura',
+    name: 'Aura',
+    role: 'Community Liaison',
+    voiceId: 'piTKgcLEGmPE4e6mEKli',
+    portrait: '/videos/posters/aura.jpg',
+    video: '/videos/aura.mp4',
     color: '#14B8A6',
     accent: 'rgba(20,184,166,',
     greeting:
-      "Orion online. Facility energy, thermal waste, GhostConverter asset analysis. " +
-      "Which facility are we examining?",
+      "Aura here, Community Liaison for the Ledger. " +
+      "I connect communities to verified industrial carbon across Asphalt RAP, Biochar CDR, and Metal Recovery. How can I help?",
   },
 ];
 
@@ -278,7 +256,10 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, persona: activePersona.id }),
+        body: JSON.stringify({
+          messages: history,
+          persona: activePersona.apiPersona ?? activePersona.id,
+        }),
       });
 
       if (!res.ok) throw new Error(`chat HTTP ${res.status}`);
@@ -444,18 +425,13 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
                 className="w-full h-full object-cover"
               />
               )}
-              <picture
+              <img
                 key={`${activePersona.id}-fallback`}
+                src={activePersona.portrait}
+                alt={activePersona.name}
                 style={{ display: activePersona.video ? 'none' : 'block' }}
-              >
-                <source srcSet={activePersona.portrait} type="image/avif" />
-                <source srcSet={activePersona.portrait.replace('.avif', '.webp')} type="image/webp" />
-                <img
-                  src={activePersona.portrait.replace('.avif', '.webp')}
-                  alt={activePersona.name}
-                  className="w-full h-full object-cover"
-                />
-              </picture>
+                className="w-full h-full object-cover"
+              />
             </div>
 
             <div>
@@ -518,22 +494,18 @@ export default function ChatWindow({ open = false, onClose }: ChatWindowProps) {
                 }}
                 onClick={() => switchPersona(p)}
               >
-                <picture>
-                  <source srcSet={p.portrait} type="image/avif" />
-                  <source srcSet={p.portrait.replace('.avif', '.webp')} type="image/webp" />
-                  <img
-                    src={p.portrait.replace('.avif', '.webp')}
-                    alt={p.name}
-                    className="rounded-full object-cover"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      border: active
-                        ? `2px solid ${p.color}`
-                        : '2px solid rgba(255,255,255,0.15)',
-                    }}
-                  />
-                </picture>
+                <img
+                  src={p.portrait}
+                  alt={p.name}
+                  className="rounded-full object-cover"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    border: active
+                      ? `2px solid ${p.color}`
+                      : '2px solid rgba(255,255,255,0.15)',
+                  }}
+                />
                 <span
                   className="text-[9px] font-medium leading-none"
                   style={{
