@@ -2,7 +2,7 @@
 import LiveAvatarAgent from "@/components/LiveAvatarAgent";
 import GuideWizardV2 from "@/components/GuideWizardV2";
 import StepShell from "./_components/StepShell";
-import Step1Gate from "./_components/Step1Gate";
+import Step1Gate, { type IntakePayload, type IntakeTrack } from "./_components/Step1Gate";
 import Step2Ingest from "./_components/Step2Ingest";
 import Step3Confirm from "./_components/Step3Confirm";
 
@@ -33,13 +33,15 @@ export const dynamic = "force-dynamic";
 
 export default function BedrockFADPage() {
   const [mounted, setMounted] = useState(false);
+
+  // ── Guided intake orchestration (Sprint 7) ──
+  const [intakeTrack, setIntakeTrack] = useState<IntakeTrack | null>(null);
   const [activeStep, setStep] = useState<1 | 2 | 3>(1);
-  const [submissionRef, setSubmissionRef] = useState<string | null>(null);
-  const [contactPayload, setContactPayload] = useState<{
-    companyName: string;
-    contactName: string;
-    contactEmail: string;
-  } | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [contactPayload, setContactPayload] = useState<IntakePayload | null>(null);
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+
   const [kwInput, setKwInput] = useState(350);
   const [hours, setHours] = useState(5200);
   const [selectedState, setSelectedState] = useState("US");
@@ -48,6 +50,16 @@ export default function BedrockFADPage() {
   const [scanActive, setScanActive] = useState(false);
   const [ticker, setTicker] = useState({ flux: 847.3, co2: 1284.7 });
   const [refCode, setRefCode] = useState<string | null>(null);
+
+  const markComplete = (n: number) =>
+    setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
+
+  // Green micro-confirmation toast auto-dismiss (2.5s).
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Sprint 5 — referral capture: read ?ref=, persist a 90-day cookie, surface read-only.
   useEffect(() => {
@@ -98,11 +110,43 @@ export default function BedrockFADPage() {
     return <div style={{ minHeight: "100vh", background: "#030712" }} />;
   }
 
+  const selectTrack = (t: IntakeTrack) => {
+    setIntakeTrack(t);
+    setStep(1);
+    setCompletedSteps([]);
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "#030712", color: "#e2e8f0", position: "relative", overflow: "hidden", fontFamily: "'Space Grotesk', sans-serif" }}>
 
       {/* AMBIENT BACKGROUND */}
       <div style={{ position: "fixed", top: "40%", left: "50%", transform: "translate(-50%,-50%)", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,242,254,.07) 0%,transparent 68%)", pointerEvents: "none", zIndex: 0 }} />
+
+      {/* GREEN MICRO-CONFIRMATION TOAST */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            top: 18,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 90,
+            padding: "12px 22px",
+            borderRadius: 4,
+            background: "rgba(16,185,129,.14)",
+            border: "1px solid rgba(16,185,129,.5)",
+            color: "#10b981",
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: ".02em",
+            boxShadow: "0 0 30px -6px rgba(16,185,129,.5)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+          }}
+        >
+          {toast}
+        </div>
+      )}
 
       {/* TOP HUD */}
       <div style={{ position: "relative", zIndex: 30, borderBottom: "1px solid rgba(0,242,254,.14)", background: "rgba(3,7,18,.82)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", padding: "12px 24px" }}>
@@ -135,31 +179,144 @@ export default function BedrockFADPage() {
         </div>
       </div>
 
-      {/* PINNED 3-STEP PROGRESS */}
-      <StepShell activeStep={activeStep} />
+      {/* PINNED 3-STEP PROGRESS — only once a track is chosen */}
+      {intakeTrack && <StepShell activeStep={activeStep} completedSteps={completedSteps} />}
 
       {/* PRIMARY INTAKE FLOW */}
       <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "40px 24px 12px" }}>
-        {activeStep === 1 && (
-          <Step1Gate
-            referralCode={refCode}
-            onNext={(payload) => {
-              setContactPayload(payload);
-              setStep(2);
-            }}
-          />
+        {!intakeTrack ? (
+          /* ── S7-01 ENTRY FORK ── */
+          <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+            <h1 style={{ fontSize: 32, fontWeight: 700, color: "#f8fafc", letterSpacing: "-.02em", marginBottom: 10 }}>
+              It&apos;s Easy to Get Started
+            </h1>
+            <p style={{ fontSize: 14, color: "#94a3b8", marginBottom: 36 }}>
+              Choose the path that fits you best.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 20 }}>
+              {([
+                {
+                  key: "residential" as IntakeTrack,
+                  icon: "fa-house",
+                  title: "Residential / Homeowner",
+                  desc: "A few quick details and your utility bills. We handle the rest.",
+                  accent: "#06b6d4",
+                  glow: "rgba(6,182,212,.5)",
+                  border: "rgba(6,182,212,.3)",
+                },
+                {
+                  key: "commercial" as IntakeTrack,
+                  icon: "fa-building",
+                  title: "Business / Commercial",
+                  desc: "Facility profile and data files for a full forensic discovery review.",
+                  accent: "#f59e0b",
+                  glow: "rgba(245,158,11,.5)",
+                  border: "rgba(245,158,11,.3)",
+                },
+              ]).map((card) => (
+                <button
+                  key={card.key}
+                  onClick={() => selectTrack(card.key)}
+                  style={{
+                    position: "relative",
+                    textAlign: "left",
+                    padding: "28px 26px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    background: "rgba(15,23,42,.62)",
+                    backdropFilter: "blur(22px)",
+                    WebkitBackdropFilter: "blur(22px)",
+                    border: `1px solid ${card.border}`,
+                    fontFamily: "inherit",
+                    transition: "all .2s ease",
+                    boxShadow: `0 0 40px -16px ${card.glow}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = card.accent;
+                    e.currentTarget.style.boxShadow = `0 0 46px -10px ${card.glow}`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = card.border;
+                    e.currentTarget.style.boxShadow = `0 0 40px -16px ${card.glow}`;
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: `${card.accent}1a`,
+                      border: `1px solid ${card.border}`,
+                      marginBottom: 18,
+                    }}
+                  >
+                    <i className={`fa-solid ${card.icon}`} style={{ fontSize: 20, color: card.accent }} />
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#f8fafc", marginBottom: 8 }}>{card.title}</div>
+                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginBottom: 20 }}>{card.desc}</div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: ".1em",
+                      textTransform: "uppercase",
+                      color: card.accent,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    Choose this path <span>→</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {activeStep === 1 && (
+              <Step1Gate
+                track={intakeTrack}
+                referralCode={refCode}
+                initial={contactPayload}
+                onNext={(payload) => {
+                  setContactPayload(payload);
+                  markComplete(1);
+                  setToast("✅ Step 1 Complete — Info Saved.");
+                  setStep(2);
+                }}
+              />
+            )}
+            {activeStep === 2 && (
+              <Step2Ingest
+                track={intakeTrack}
+                initialFiles={stagedFiles}
+                onBack={() => setStep(1)}
+                onNext={(files) => {
+                  setStagedFiles(files);
+                  markComplete(2);
+                  setToast(
+                    `✅ ${files.length} File${files.length === 1 ? "" : "s"} Attached & Verified — Ready for Final Review.`
+                  );
+                  setStep(3);
+                }}
+              />
+            )}
+            {activeStep === 3 && contactPayload && (
+              <Step3Confirm
+                track={intakeTrack}
+                payload={contactPayload}
+                files={stagedFiles}
+                referralCode={refCode}
+                onEditInfo={() => setStep(1)}
+                onEditFiles={() => setStep(2)}
+              />
+            )}
+          </>
         )}
-        {activeStep === 2 && (
-          <Step2Ingest
-            contactPayload={contactPayload}
-            referralCode={refCode}
-            onNext={(ref) => {
-              setSubmissionRef(ref);
-              setStep(3);
-            }}
-          />
-        )}
-        {activeStep === 3 && <Step3Confirm submissionRef={submissionRef} />}
       </div>
 
       {/* FORENSIC CONTEXT — THERMAL WASTE ORACLE */}

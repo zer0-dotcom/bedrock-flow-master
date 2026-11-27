@@ -1,87 +1,104 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import HelpTooltip from '@/components/ui/HelpTooltip';
+import type { IntakeTrack } from './Step1Gate';
 
-interface ContactPayload {
-  companyName: string;
-  contactName: string;
-  contactEmail: string;
+// Per-track client-side allowlists. Server-side (lib/intake-validators.ts) is the
+// authoritative gate; this is a fast-fail UX layer so bad files never stage.
+const RESIDENTIAL_EXT = ['.pdf', '.png', '.jpg', '.jpeg'];
+const COMMERCIAL_EXT = ['.pdf', '.png', '.jpg', '.jpeg', '.xml', '.csv'];
+const MAX_BYTES = 20 * 1024 * 1024; // 20 MB / file
+
+interface RejectedFile {
+  name: string;
+  reason: string;
 }
 
+const extOf = (name: string): string => {
+  const i = name.lastIndexOf('.');
+  return i >= 0 ? name.slice(i).toLowerCase() : '';
+};
+
+const iconFor = (name: string): string => {
+  const e = extOf(name);
+  if (e === '.pdf') return 'fa-file-pdf';
+  if (e === '.png' || e === '.jpg' || e === '.jpeg') return 'fa-file-image';
+  if (e === '.xml') return 'fa-file-code';
+  if (e === '.csv') return 'fa-file-csv';
+  return 'fa-file';
+};
+
+const humanSize = (bytes: number): string =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+    : `${(bytes / 1024).toFixed(1)} KB`;
+
 export default function Step2Ingest({
-  contactPayload,
+  track,
+  initialFiles = [],
   onNext,
-  referralCode,
+  onBack,
 }: {
-  contactPayload: ContactPayload | null;
-  onNext: (submissionRef: string) => void;
-  referralCode?: string | null;
+  track: IntakeTrack;
+  initialFiles?: File[];
+  onNext: (files: File[]) => void;
+  onBack?: () => void;
 }) {
+  const residential = track === 'residential';
+  const accent = residential ? '#06b6d4' : '#f59e0b';
+  const allowedExt = residential ? RESIDENTIAL_EXT : COMMERCIAL_EXT;
+  const acceptAttr = allowedExt.join(',');
+  const maxFiles = residential ? 2 : Infinity;
+
+  const [files, setFiles] = useState<File[]>(initialFiles);
+  const [rejected, setRejected] = useState<RejectedFile[]>([]);
   const [dragOver, setDragOver] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFiles = (files: FileList | null) => {
-    if (files && files.length > 0) {
-      setSelectedFile(files[0]);
-      setError(null);
-    }
-  };
+  const addFiles = (incoming: FileList | File[] | null) => {
+    if (!incoming) return;
+    const list = Array.from(incoming);
+    const nextRejected: RejectedFile[] = [];
 
-  const errorForStatus = (status: number): string => {
-    if (status === 400) return 'Please check your contact details.';
-    if (status === 413) return 'File exceeds the 10 MB limit.';
-    if (status === 415) return 'File type not accepted. Use PDF, XML, or CSV.';
-    if (status === 429) return 'Too many submissions. Please wait.';
-    return 'Submission failed. Please try again.';
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedFile || submitting) return;
-    if (!contactPayload) {
-      setError('Please check your contact details.');
-      return;
-    }
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const fd = new FormData();
-      fd.append('companyName', contactPayload.companyName);
-      fd.append('contactName', contactPayload.contactName);
-      fd.append('contactEmail', contactPayload.contactEmail);
-      if (referralCode) fd.append('referralCode', referralCode);
-      fd.append('file', selectedFile);
-
-      const res = await fetch('/api/bedrockfad/intake', {
-        method: 'POST',
-        body: fd,
-      });
-
-      if (res.status === 201) {
-        const data = await res.json().catch(() => null);
-        const ref: string | undefined = data?.submissionRef;
-        if (data?.ok && ref) {
-          onNext(ref);
-          return;
+    setFiles((prev) => {
+      const accepted = [...prev];
+      for (const f of list) {
+        const e = extOf(f.name);
+        if (!allowedExt.includes(e)) {
+          nextRejected.push({
+            name: f.name,
+            reason: `Unsupported type — accepts ${allowedExt.join(', ')}.`,
+          });
+          continue;
         }
-        setError('Submission failed. Please try again.');
-        return;
+        if (f.size > MAX_BYTES) {
+          nextRejected.push({ name: f.name, reason: 'Exceeds 20 MB per-file limit.' });
+          continue;
+        }
+        // Dedupe by name + size.
+        if (accepted.some((a) => a.name === f.name && a.size === f.size)) continue;
+        if (accepted.length >= maxFiles) {
+          nextRejected.push({
+            name: f.name,
+            reason: `Limit of ${maxFiles} file${maxFiles === 1 ? '' : 's'} reached.`,
+          });
+          continue;
+        }
+        accepted.push(f);
       }
+      return accepted;
+    });
 
-      setError(errorForStatus(res.status));
-    } catch {
-      setError('Submission failed. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    setRejected(nextRejected);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
-  const fileSizeKb = selectedFile ? (selectedFile.size / 1024).toFixed(1) : null;
-  const ctaDisabled = !selectedFile || submitting;
+  const removeFile = (idx: number) =>
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+
+  const atCapacity = files.length >= maxFiles;
+  const confirmDisabled = files.length === 0;
 
   return (
     <div
@@ -92,7 +109,7 @@ export default function Step2Ingest({
         background: 'rgba(15,23,42,.62)',
         backdropFilter: 'blur(22px)',
         WebkitBackdropFilter: 'blur(22px)',
-        border: '1px solid rgba(245,158,11,.18)',
+        border: `1px solid ${residential ? 'rgba(6,182,212,.18)' : 'rgba(245,158,11,.18)'}`,
         borderRadius: 4,
       }}
     >
@@ -100,140 +117,235 @@ export default function Step2Ingest({
         style={{
           fontSize: 10,
           letterSpacing: '.18em',
-          color: '#f59e0b',
+          color: accent,
           textTransform: 'uppercase',
           marginBottom: 8,
         }}
       >
-        Step 2 · Upload Data
+        Step 2 · Drop &amp; Submit Your Files
       </div>
-      <h2 style={{ fontSize: 22, fontWeight: 700, color: '#f8fafc', marginBottom: 24 }}>
-        Upload your facility data
-        <HelpTooltip content="Accepted: PDF, DOCX, XLSX, images. Max 50 MB. Files are SHA-256 verified on receipt and stored in an isolated vault — never publicly accessible." />
+      <h2 style={{ fontSize: 22, fontWeight: 700, color: '#f8fafc', marginBottom: 6 }}>
+        {residential ? 'Attach your utility bills' : 'Attach your facility data'}
+        <HelpTooltip content="Files are SHA-256 verified on receipt and stored in an isolated vault — never publicly accessible." />
       </h2>
+      <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 22 }}>
+        {residential
+          ? 'Drop up to 2 files. Accepts PDF, PNG, JPG · Max 20 MB each.'
+          : 'Drop one or more files. Accepts PDF, PNG, JPG, XML, CSV · Max 20 MB each.'}
+      </p>
 
+      {/* DROPZONE — label wraps a hidden multi-file input */}
       <label
+        htmlFor="s2-file-input"
         onDragOver={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setDragOver(true);
         }}
-        onDragLeave={() => setDragOver(false)}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOver(false);
+        }}
         onDrop={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setDragOver(false);
-          handleFiles(e.dataTransfer.files);
+          addFiles(e.dataTransfer.files);
         }}
         style={{
           display: 'block',
-          border: `1px dashed ${dragOver ? 'rgba(245,158,11,.9)' : 'rgba(245,158,11,.4)'}`,
+          border: `1px dashed ${dragOver ? accent : residential ? 'rgba(6,182,212,.4)' : 'rgba(245,158,11,.4)'}`,
           borderRadius: 3,
-          padding: '44px 20px',
+          padding: files.length ? '24px 20px' : '44px 20px',
           textAlign: 'center',
-          cursor: 'pointer',
-          background: dragOver ? 'rgba(245,158,11,.06)' : 'transparent',
+          cursor: atCapacity ? 'not-allowed' : 'pointer',
+          background: dragOver ? `${residential ? 'rgba(6,182,212,.06)' : 'rgba(245,158,11,.06)'}` : 'transparent',
+          opacity: atCapacity ? 0.55 : 1,
+          transition: 'all .2s ease',
         }}
       >
         <input
+          id="s2-file-input"
+          ref={inputRef}
           type="file"
-          accept=".pdf,.xml,.csv"
+          multiple
+          accept={acceptAttr}
+          disabled={atCapacity}
           style={{ display: 'none' }}
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => addFiles(e.target.files)}
         />
         <i
-          className="fa-solid fa-file-waveform"
-          style={{ fontSize: 30, color: '#94a3b8', marginBottom: 14, display: 'block' }}
+          className="fa-solid fa-cloud-arrow-up"
+          style={{ fontSize: 28, color: '#94a3b8', marginBottom: 12, display: 'block' }}
         />
-        <div style={{ fontSize: 14, color: '#cbd5e1', marginBottom: 6 }}>
-          {selectedFile ? `Selected: ${selectedFile.name}` : 'Upload your facility data'}
-        </div>
-        <div style={{ fontSize: 11, color: '#94a3b8', letterSpacing: '.06em' }}>
-          Accepted formats: PDF, XML, CSV · Max 50 MB
-        </div>
-      </label>
-
-      <details style={{ marginTop: 14 }}>
-        <summary
-          style={{
-            fontSize: 11,
-            color: '#94a3b8',
-            letterSpacing: '.04em',
-            cursor: 'pointer',
-            userSelect: 'none',
-          }}
-        >
-          What can I upload?
-        </summary>
-        <ul
-          style={{
-            marginTop: 10,
-            padding: '12px 14px 12px 28px',
-            border: '1px solid rgba(255,255,255,.08)',
-            borderRadius: 3,
-            fontSize: 11,
-            color: '#cbd5e1',
-            lineHeight: 1.9,
-            listStyle: 'disc',
-          }}
-        >
-          <li>Phase I / Phase II Environmental Site Assessments (PDF)</li>
-          <li>Contamination remediation cost reports</li>
-          <li>Mineral assay certificates (PDF, XLSX)</li>
-          <li>Biochar production &amp; verification records</li>
-          <li>Legacy industrial liability documentation</li>
-          <li>Corporate carbon accounting worksheets (XLSX)</li>
-        </ul>
-      </details>
-
-      {selectedFile && (
-        <div
-          style={{
-            marginTop: 14,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: 11,
-            color: '#cbd5e1',
-            borderTop: '1px solid rgba(255,255,255,.06)',
-            paddingTop: 12,
-          }}
-        >
-          <span style={{ fontFamily: 'monospace', letterSpacing: '.04em' }}>{selectedFile.name}</span>
-          <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
-            {fileSizeKb} KB
-            <HelpTooltip content="This SHA-256 fingerprint confirms your file arrived unmodified. It is recorded on the submission ledger." />
+        <div style={{ fontSize: 14, color: '#cbd5e1', marginBottom: 4 }}>
+          Drop Utility Bills Here or{' '}
+          <span style={{ color: accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+            Browse Files
           </span>
         </div>
-      )}
+        <div style={{ fontSize: 10, color: '#64748b', letterSpacing: '.08em' }}>
+          {atCapacity
+            ? `Maximum of ${maxFiles} files attached`
+            : allowedExt.map((x) => x.replace('.', '').toUpperCase()).join(' · ')}
+        </div>
 
-      {error && (
-        <div style={{ marginTop: 14, fontSize: 11, color: '#ef4444', letterSpacing: '.02em' }}>
-          {error}
+        {/* LIVE STACKED FILE CARDS — inside the dropzone */}
+        {files.length > 0 && (
+          <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
+            {files.map((f, idx) => (
+              <div
+                key={`${f.name}-${f.size}-${idx}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '12px 14px',
+                  border: '1px solid rgba(16,185,129,.3)',
+                  background: 'rgba(16,185,129,.05)',
+                  borderRadius: 3,
+                }}
+              >
+                <i className={`fa-solid ${iconFor(f.name)}`} style={{ fontSize: 18, color: accent, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: '#f1f5f9',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {f.name}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                    {humanSize(f.size)} · <span style={{ color: '#10b981' }}>✅ Ready to Submit</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeFile(idx);
+                  }}
+                  aria-label={`Remove ${f.name}`}
+                  style={{
+                    flexShrink: 0,
+                    width: 26,
+                    height: 26,
+                    borderRadius: '50%',
+                    border: '1px solid #334155',
+                    background: 'transparent',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontFamily: 'inherit',
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </label>
+
+      {/* REJECTED FILES — inline red cards, never staged */}
+      {rejected.length > 0 && (
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {rejected.map((r, i) => (
+            <div
+              key={`${r.name}-${i}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                border: '1px solid rgba(239,68,68,.4)',
+                background: 'rgba(239,68,68,.06)',
+                borderRadius: 3,
+              }}
+            >
+              <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: 13, color: '#ef4444', flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#fca5a5',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {r.name}
+                </div>
+                <div style={{ fontSize: 10, color: '#ef4444', marginTop: 2 }}>{r.reason}</div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={ctaDisabled}
-        style={{
-          marginTop: 24,
-          width: '100%',
-          padding: '14px 24px',
-          fontSize: 12,
-          fontWeight: 600,
-          letterSpacing: '.1em',
-          textTransform: 'uppercase',
-          color: '#030712',
-          background: '#f59e0b',
-          border: 'none',
-          borderRadius: 3,
-          cursor: ctaDisabled ? 'not-allowed' : 'pointer',
-          opacity: ctaDisabled ? 0.5 : 1,
-          fontFamily: 'inherit',
-          boxShadow: ctaDisabled ? 'none' : '0 0 24px -6px rgba(245,158,11,.6)',
-        }}
-      >
-        {submitting ? 'Submitting…' : 'Submit for Forensic Review →'}
-      </button>
+      {/* NAVIGATION */}
+      <div style={{ marginTop: 26, display: 'flex', gap: 12, alignItems: 'center' }}>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              padding: '14px 20px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '.08em',
+              textTransform: 'uppercase',
+              color: '#94a3b8',
+              background: 'transparent',
+              border: '1px solid #334155',
+              borderRadius: 3,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            ← Back
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (confirmDisabled) return;
+            onNext(files);
+          }}
+          disabled={confirmDisabled}
+          style={{
+            flex: 1,
+            padding: '14px 24px',
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '.1em',
+            textTransform: 'uppercase',
+            color: '#030712',
+            background: accent,
+            border: 'none',
+            borderRadius: 3,
+            cursor: confirmDisabled ? 'not-allowed' : 'pointer',
+            opacity: confirmDisabled ? 0.5 : 1,
+            fontFamily: 'inherit',
+            boxShadow: confirmDisabled
+              ? 'none'
+              : `0 0 24px -6px ${residential ? 'rgba(6,182,212,.6)' : 'rgba(245,158,11,.6)'}`,
+          }}
+        >
+          {confirmDisabled
+            ? 'Confirm Files'
+            : `Confirm ${files.length} File${files.length === 1 ? '' : 's'} →`}
+        </button>
+      </div>
     </div>
   );
 }

@@ -13,9 +13,11 @@ export const ALLOWED_MIME_TYPES = [
   'application/xml',
   'text/csv',
   'application/csv',
+  'image/png',
+  'image/jpeg',
 ];
 
-export const ALLOWED_EXTENSIONS = ['.pdf', '.xml', '.csv'];
+export const ALLOWED_EXTENSIONS = ['.pdf', '.xml', '.csv', '.png', '.jpg', '.jpeg'];
 
 export interface FileValidationResult {
   valid: boolean;
@@ -127,6 +129,28 @@ function inspectCsv(buffer: Buffer): FileValidationResult {
   return { valid: true };
 }
 
+function inspectPng(buffer: Buffer): FileValidationResult {
+  // PNG magic = 89 50 4E 47 0D 0A 1A 0A (8 bytes).
+  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (buffer.length >= 8 && sig.every((b, i) => buffer[i] === b)) {
+    return { valid: true };
+  }
+  return { valid: false, reason: 'File content does not match a valid PNG.' };
+}
+
+function inspectJpeg(buffer: Buffer): FileValidationResult {
+  // JPEG SOI magic = FF D8 FF (first 3 bytes).
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return { valid: true };
+  }
+  return { valid: false, reason: 'File content does not match a valid JPG.' };
+}
+
 // ---- public API ------------------------------------------------------------
 
 export function validateFile(
@@ -139,7 +163,7 @@ export function validateFile(
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return {
       valid: false,
-      reason: 'File type not accepted. Use PDF, XML, or CSV.',
+      reason: 'File type not accepted. Use PDF, PNG, JPG, XML, or CSV.',
     };
   }
 
@@ -147,7 +171,7 @@ export function validateFile(
   if (!ALLOWED_MIME_TYPES.includes((declaredMime || '').toLowerCase())) {
     return {
       valid: false,
-      reason: 'File type not accepted. Use PDF, XML, or CSV.',
+      reason: 'File type not accepted. Use PDF, PNG, JPG, XML, or CSV.',
     };
   }
 
@@ -163,10 +187,15 @@ export function validateFile(
       return inspectXml(buffer);
     case '.csv':
       return inspectCsv(buffer);
+    case '.png':
+      return inspectPng(buffer);
+    case '.jpg':
+    case '.jpeg':
+      return inspectJpeg(buffer);
     default:
       return {
         valid: false,
-        reason: 'File type not accepted. Use PDF, XML, or CSV.',
+        reason: 'File type not accepted. Use PDF, PNG, JPG, XML, or CSV.',
       };
   }
 }

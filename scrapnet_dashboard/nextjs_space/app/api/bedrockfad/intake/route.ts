@@ -94,81 +94,109 @@ export async function POST(request: Request) {
     );
   }
 
-  // (5) File presence.
-  const fileEntry = formData.get('file');
-  if (!(fileEntry instanceof File) || fileEntry.size === 0) {
+  // (5) File presence — accept one OR many files under the key 'file'.
+  // Single-file requests behave exactly as before (one validated entry).
+  const fileEntries = formData
+    .getAll('file')
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (fileEntries.length === 0) {
     return NextResponse.json(
       { ok: false, error: 'A file is required.' },
       { status: 400 },
     );
   }
-  const file = fileEntry;
 
-  // (6) 50MB cap (check cheap size before buffering).
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json(
-      { ok: false, error: 'File exceeds the 50 MB limit.' },
-      { status: 413 },
-    );
+  // (6-9) Validate + buffer + hash EVERY file BEFORE any disk write, so a bad
+  // file in the batch never leaves orphaned bytes on disk.
+  interface PreparedFile {
+    file: File;
+    buffer: Buffer;
+    storagePath: string;
+    fileHash: string;
+  }
+  const prepared: PreparedFile[] = [];
+  for (const file of fileEntries) {
+    // (6) 50MB cap (cheap size check before buffering).
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json(
+        { ok: false, error: 'File exceeds the 50 MB limit.' },
+        { status: 413 },
+      );
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (buffer.length > MAX_BYTES) {
+      return NextResponse.json(
+        { ok: false, error: 'File exceeds the 50 MB limit.' },
+        { status: 413 },
+      );
+    }
+
+    // (7) Magic-byte / structural validation.
+    const verdict = validateFile(buffer, file.name, file.type);
+    if (!verdict.valid) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            verdict.reason ||
+            'File type not accepted. Use PDF, PNG, JPG, XML, or CSV.',
+        },
+        { status: 415 },
+      );
+    }
+
+    // (8) Sanitize filename -> UUID + cleaned extension.
+    const ext = path.extname(file.name).toLowerCase().replace(/[^.a-z0-9]/g, '');
+    const storedName = `${randomUUID()}${ext}`;
+    const storagePath = path.join(UPLOAD_DIR, storedName);
+
+    // (9) SHA-256 of the exact bytes stored.
+    const fileHash = createHash('sha256').update(buffer).digest('hex');
+
+    prepared.push({ file, buffer, storagePath, fileHash });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  if (buffer.length > MAX_BYTES) {
-    return NextResponse.json(
-      { ok: false, error: 'File exceeds the 50 MB limit.' },
-      { status: 413 },
-    );
+  // (10) Persist every validated file to disk, owner read/write only.
+  for (const p of prepared) {
+    try {
+      await writeFile(p.storagePath, p.buffer, { mode: 0o600 });
+    } catch (err) {
+      console.error('[intake] storage write failed:', err);
+      return NextResponse.json(
+        { ok: false, error: 'Submission failed. Please try again.' },
+        { status: 500 },
+      );
+    }
   }
 
-  // (7) Magic-byte / structural validation.
-  const verdict = validateFile(buffer, file.name, file.type);
-  if (!verdict.valid) {
-    return NextResponse.json(
-      { ok: false, error: verdict.reason || 'File type not accepted. Use PDF, XML, or CSV.' },
-      { status: 415 },
-    );
-  }
-
-  // (8) Sanitize filename -> UUID + cleaned extension.
-  const ext = path.extname(file.name).toLowerCase().replace(/[^.a-z0-9]/g, '');
-  const storedName = `${randomUUID()}${ext}`;
-  const storagePath = path.join(UPLOAD_DIR, storedName);
-
-  // (9) SHA-256 of the exact bytes stored.
-  const fileHash = createHash('sha256').update(buffer).digest('hex');
-
-  // (10) Persist to disk, owner read/write only.
-  try {
-    await writeFile(storagePath, buffer, { mode: 0o600 });
-  } catch (err) {
-    console.error('[intake] storage write failed:', err);
-    return NextResponse.json(
-      { ok: false, error: 'Submission failed. Please try again.' },
-      { status: 500 },
-    );
-  }
-
-  // (11) Deterministic reference.
+  // (11) Deterministic reference for the submission (shared root).
   const submissionRef = `FAD-${dateStampUTC(new Date())}-${randomBytes(3)
     .toString('hex')
     .toUpperCase()}`;
 
-  // (12) Record intake.
+  // (12) Record intake — one row per file. First file keeps the canonical ref
+  // (byte-for-byte identical to the legacy single-file contract); additional
+  // files in the same batch are suffixed `-2`, `-3`, ... to satisfy @unique.
   try {
-    await prisma.corporateIntake.create({
-      data: {
-        submissionRef,
-        companyName,
-        contactName,
-        contactEmail,
-        fileName: file.name,
-        mimeType: file.type,
-        fileSizeBytes: buffer.length,
-        fileHash,
-        storagePath,
-        referralCode,
-      },
-    });
+    for (let i = 0; i < prepared.length; i++) {
+      const p = prepared[i];
+      const rowRef = i === 0 ? submissionRef : `${submissionRef}-${i + 1}`;
+      await prisma.corporateIntake.create({
+        data: {
+          submissionRef: rowRef,
+          companyName,
+          contactName,
+          contactEmail,
+          fileName: p.file.name,
+          mimeType: p.file.type,
+          fileSizeBytes: p.buffer.length,
+          fileHash: p.fileHash,
+          storagePath: p.storagePath,
+          referralCode,
+        },
+      });
+    }
   } catch (err) {
     console.error('[intake] persist failed:', err);
     return NextResponse.json(
@@ -180,19 +208,28 @@ export async function POST(request: Request) {
   // (13) Best-effort operator notification — never fatal.
   if (process.env.ADMIN_MASTER_EMAIL && process.env.RESEND_API_KEY) {
     try {
-      const sizeKb = (buffer.length / 1024).toFixed(1);
+      const fileRows = prepared
+        .map((p) => {
+          const sizeKb = (p.buffer.length / 1024).toFixed(1);
+          return `
+          <tr><td style="padding:2px 12px 2px 0">File</td><td>${p.file.name}</td></tr>
+          <tr><td style="padding:2px 12px 2px 0">MIME</td><td>${p.file.type}</td></tr>
+          <tr><td style="padding:2px 12px 2px 0">Size</td><td>${sizeKb} KB</td></tr>
+          <tr><td style="padding:2px 12px 2px 0">SHA-256</td><td style="font-family:monospace">${p.fileHash}</td></tr>
+          <tr><td colspan="2" style="padding:4px 0"><hr style="border:none;border-top:1px solid #ccc"/></td></tr>`;
+        })
+        .join('');
       const html = `
         <h2>Corporate Intake Received</h2>
         <p><strong>Reference:</strong> ${submissionRef}</p>
         <p><strong>Status:</strong> PENDING_FORENSIC_REVIEW</p>
+        <p><strong>Files:</strong> ${prepared.length}</p>
         <table style="border-collapse:collapse">
           <tr><td style="padding:2px 12px 2px 0">Company</td><td>${companyName}</td></tr>
           <tr><td style="padding:2px 12px 2px 0">Contact</td><td>${contactName}</td></tr>
           <tr><td style="padding:2px 12px 2px 0">Email</td><td>${contactEmail}</td></tr>
-          <tr><td style="padding:2px 12px 2px 0">File</td><td>${file.name}</td></tr>
-          <tr><td style="padding:2px 12px 2px 0">MIME</td><td>${file.type}</td></tr>
-          <tr><td style="padding:2px 12px 2px 0">Size</td><td>${sizeKb} KB</td></tr>
-          <tr><td style="padding:2px 12px 2px 0">SHA-256</td><td style="font-family:monospace">${fileHash}</td></tr>
+          <tr><td colspan="2" style="padding:4px 0"><hr style="border:none;border-top:1px solid #ccc"/></td></tr>
+          ${fileRows}
         </table>
       `;
       await sendEmail({
