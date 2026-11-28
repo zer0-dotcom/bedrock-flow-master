@@ -24,7 +24,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
   try {
     const resend = getResendClient();
     const { data, error } = await resend.emails.send({
-      from: options.from || 'onboarding@bedrockEsg.io',
+      from: options.from || 'ops@bedrockesg.com',
       to: options.to,
       subject: options.subject,
       html: options.html,

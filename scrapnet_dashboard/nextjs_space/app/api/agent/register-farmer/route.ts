@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
         to: email.toLowerCase(),
         subject: `🌱 Welcome to Bedrock ESG – Your Farmer Welcome Kit`,
         html: htmlBody,
-        from: 'Bedrock ESG Onboarding <onboarding@bedrockEsg.io>',
+        from: 'Bedrock ESG Onboarding <ops@bedrockesg.com>',
       });
 
       if (!emailResult.success) {
